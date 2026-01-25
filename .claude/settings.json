@@ -1,26 +1,26 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git status)",
-      "Bash(git diff*)",
-      "Bash(git log*)",
-      "Bash(git branch*)",
-      "Bash(git checkout*)",
-      "Bash(git add*)",
-      "Bash(pytest*)",
-      "Bash(python -m pytest*)",
-      "Bash(python -m flake8*)",
-      "Bash(python -m pylint*)",
-      "Bash(npm test*)",
-      "Bash(npx eslint*)",
-      "Bash(ls*)",
-      "Bash(cat*)",
-      "Bash(mkdir*)"
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git branch:*)",
+      "Bash(git checkout:*)",
+      "Bash(git add:*)",
+      "Bash(pytest:*)",
+      "Bash(python -m pytest:*)",
+      "Bash(python -m flake8:*)",
+      "Bash(python -m pylint:*)",
+      "Bash(npm test:*)",
+      "Bash(npx eslint:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(mkdir:*)"
     ],
     "deny": [
-      "Bash(git push --force*)",
-      "Bash(git reset --hard*)",
-      "Bash(rm -rf*)"
+      "Bash(git push --force:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(rm -rf:*)"
     ]
   }
 }
