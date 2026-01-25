@@ -63,13 +63,20 @@ class VideoTransformTrack(MediaStreamTrack):
   async def recv(self) -> VideoFrame:
     """Receive a frame, process it, and return the result.
 
+    Processing is offloaded to a thread pool to avoid blocking
+    the event loop during CPU-intensive image processing.
+
     Returns:
       The processed video frame with edge detection applied.
     """
     frame = await self._track.recv()
 
     img = frame.to_ndarray(format="bgr24")
-    processed_img, stats = self._processor.process(img)
+
+    loop = asyncio.get_event_loop()
+    processed_img, stats = await loop.run_in_executor(
+        None, self._processor.process, img
+    )
 
     if self._data_channel is not None:
       try:
