@@ -18,10 +18,15 @@ import asyncio
 import json
 import logging
 from pathlib import Path
-from typing import Optional
+from typing import Optional, cast
 
 from aiohttp import web
-from aiortc import MediaStreamTrack, RTCPeerConnection, RTCSessionDescription
+from aiortc import (
+    MediaStreamTrack,
+    RTCDataChannel,
+    RTCPeerConnection,
+    RTCSessionDescription,
+)
 from aiortc.contrib.media import MediaRelay
 from av import VideoFrame
 
@@ -41,7 +46,7 @@ class VideoTransformTrack(MediaStreamTrack):
       self,
       track: MediaStreamTrack,
       processor: ImageProcessor,
-      data_channel: Optional[object] = None
+      data_channel: Optional[RTCDataChannel] = None
   ) -> None:
     """Initialize the video transform track.
 
@@ -55,7 +60,7 @@ class VideoTransformTrack(MediaStreamTrack):
     self._processor = processor
     self._data_channel = data_channel
 
-  def set_data_channel(self, data_channel: object) -> None:
+  def set_data_channel(self, data_channel: RTCDataChannel) -> None:
     """Set the data channel for sending stats.
 
     Args:
@@ -72,20 +77,19 @@ class VideoTransformTrack(MediaStreamTrack):
     Returns:
       The processed video frame with edge detection applied.
     """
-    frame = await self._track.recv()
+    frame = cast(VideoFrame, await self._track.recv())
 
     img = frame.to_ndarray(format="bgr24")
 
     loop = asyncio.get_event_loop()
     processed_img, stats = await loop.run_in_executor(
-        None, self._processor.process, img
+        None, self._processor.process, img  # type: ignore[arg-type]
     )
 
     if self._data_channel is not None:
       try:
-        if hasattr(self._data_channel, 'readyState'):
-          if self._data_channel.readyState == "open":
-            self._data_channel.send(json.dumps(stats))
+        if self._data_channel.readyState == "open":
+          self._data_channel.send(json.dumps(stats))
       except Exception as e:
         logger.warning("Failed to send stats: %s", e)
 
@@ -200,8 +204,8 @@ class WebRTCServer:
     transform_track: Optional[VideoTransformTrack] = None
 
     @pc.on("datachannel")
-    def on_datachannel(channel: object) -> None:
-      logger.info("Data channel received: %s", getattr(channel, 'label', ''))
+    def on_datachannel(channel: RTCDataChannel) -> None:
+      logger.info("Data channel received: %s", channel.label)
       if transform_track is not None:
         transform_track.set_data_channel(channel)
 

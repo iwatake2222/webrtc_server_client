@@ -15,7 +15,7 @@
 """Image processing module for WebRTC server."""
 
 import time
-from typing import Any
+from typing import Any, cast
 
 import cv2
 import numpy as np
@@ -60,7 +60,10 @@ class ImageProcessor:
     height, width = frame.shape[:2]
 
     edges = cv2.Canny(frame, self._canny_threshold1, self._canny_threshold2)
-    processed = cv2.cvtColor(edges, cv2.COLOR_GRAY2BGR)
+    processed = cast(
+        NDArray[np.uint8],
+        cv2.cvtColor(edges, cv2.COLOR_GRAY2BGR)
+    )
 
     processing_time_ms = (time.time() - start_time) * 1000
 
