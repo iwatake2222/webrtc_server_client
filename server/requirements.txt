@@ -1,0 +1,8 @@
+# Production dependencies
+# (none yet)
+
+# Development dependencies
+pytest>=8.0.0
+flake8>=7.0.0
+pylint>=3.0.0
+mypy>=1.0.0

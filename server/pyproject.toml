@@ -1,0 +1,16 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.pylint.format]
+indent-string = "  "
+max-line-length = 80
+
+[tool.flake8]
+max-line-length = 80
+indent-size = 2
+
+[tool.mypy]
+strict = true
+warn_return_any = true
+warn_unused_configs = true

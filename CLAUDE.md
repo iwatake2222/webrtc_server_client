@@ -17,4 +17,5 @@ client/   # HTML/JS frontend (src/, tests/)
 ## Rules
 - Google Style Guide, 2-space indent
 - 全コードにテスト必須
+- Python: 型ヒント必須、mypy strict mode
 - main直接コミット禁止、PR最大300行
