@@ -17,6 +17,7 @@
 import asyncio
 import json
 import logging
+from pathlib import Path
 from typing import Optional
 
 from aiohttp import web
@@ -25,6 +26,8 @@ from aiortc.contrib.media import MediaRelay
 from av import VideoFrame
 
 from src.image_processor import ImageProcessor
+
+DEFAULT_CLIENT_DIR = Path(__file__).parent.parent.parent / "client"
 
 logger = logging.getLogger(__name__)
 
@@ -95,15 +98,22 @@ class VideoTransformTrack(MediaStreamTrack):
 class WebRTCServer:
   """WebRTC server for receiving and processing video streams."""
 
-  def __init__(self, host: str = "0.0.0.0", port: int = 8080) -> None:
+  def __init__(
+      self,
+      host: str = "0.0.0.0",
+      port: int = 8080,
+      client_dir: Optional[Path] = None
+  ) -> None:
     """Initialize the WebRTC server.
 
     Args:
       host: The host address to bind to.
       port: The port to listen on.
+      client_dir: Path to client files directory for static file serving.
     """
     self._host = host
     self._port = port
+    self._client_dir = client_dir or DEFAULT_CLIENT_DIR
     self._app: Optional[web.Application] = None
     self._runner: Optional[web.AppRunner] = None
     self._pcs: set[RTCPeerConnection] = set()
@@ -114,13 +124,21 @@ class WebRTCServer:
     self._app = web.Application()
     self._app.router.add_get("/ws", self._handle_websocket)
     self._app.router.add_get("/health", self._handle_health)
+
+    if self._client_dir.exists():
+      self._app.router.add_get("/", self._handle_index)
+      self._app.router.add_static(
+          "/src", self._client_dir / "src", name="src"
+      )
+      logger.info("Serving client files from %s", self._client_dir)
+
     self._app.on_shutdown.append(self._on_shutdown)
 
     self._runner = web.AppRunner(self._app)
     await self._runner.setup()
     site = web.TCPSite(self._runner, self._host, self._port)
     await site.start()
-    logger.info("WebRTC server started on %s:%d", self._host, self._port)
+    logger.info("WebRTC server started on http://%s:%d", self._host, self._port)
 
   async def stop(self) -> None:
     """Stop the WebRTC server."""
@@ -148,6 +166,17 @@ class WebRTCServer:
       A JSON response indicating the server is healthy.
     """
     return web.json_response({"status": "healthy"})
+
+  async def _handle_index(self, request: web.Request) -> web.FileResponse:
+    """Serve the client index.html file.
+
+    Args:
+      request: The HTTP request.
+
+    Returns:
+      The index.html file response.
+    """
+    return web.FileResponse(self._client_dir / "index.html")
 
   async def _handle_websocket(
       self,
