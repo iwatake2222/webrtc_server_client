@@ -21,9 +21,13 @@
 
 import {CameraManager} from './camera.js';
 import {StatsManager} from './stats.js';
+import {WebRTCClient} from './webrtc.js';
 
 /** @type {CameraManager} */
 const cameraManager = new CameraManager();
+
+/** @type {WebRTCClient} */
+const webrtcClient = new WebRTCClient();
 
 /** @type {StatsManager} */
 let statsManager;
@@ -52,6 +56,8 @@ async function init() {
   );
   const serverResponse = document.getElementById('serverResponse');
 
+  serverUrlInput.value = getDefaultServerUrl();
+
   statsManager = new StatsManager({
     fps: document.getElementById('statsFps'),
     resolution: document.getElementById('statsResolution'),
@@ -61,32 +67,99 @@ async function init() {
 
   setupCollapseHandlers(localVideo, remoteVideo);
 
+  webrtcClient.onRemoteStream = (stream) => {
+    remoteVideo.srcObject = stream;
+    console.log('Remote stream received');
+  };
+
+  webrtcClient.onStats = (stats) => {
+    if (serverResponse) {
+      serverResponse.textContent = JSON.stringify(stats, null, 2);
+    }
+    statsManager.update({
+      fps: stats.fps,
+      width: stats.width,
+      height: stats.height,
+      rtt: stats.processing_time_ms,
+    });
+  };
+
+  webrtcClient.onConnectionStateChange = (state) => {
+    console.log('Connection state:', state);
+    if (state === 'disconnected' || state === 'failed' || state === 'closed') {
+      handleDisconnect();
+    }
+  };
+
+  webrtcClient.onError = (error) => {
+    if (serverResponse) {
+      serverResponse.textContent = `Error: ${error.message}`;
+    }
+  };
+
   connectBtn.addEventListener('click', async () => {
     try {
       const constraints = buildConstraints(resolutionSelect.value);
       await cameraManager.start(localVideo, constraints);
-      statsManager.startLocalStatsCollection(cameraManager);
+
+      const stream = cameraManager.getStream();
+      if (!stream) {
+        throw new Error('Failed to get camera stream');
+      }
+
+      const serverUrl = serverUrlInput.value || getDefaultServerUrl();
+      await webrtcClient.connect(serverUrl, stream);
+
       connectBtn.disabled = true;
       disconnectBtn.disabled = false;
       resolutionSelect.disabled = true;
-      console.log('Camera started, URL:', serverUrlInput.value);
+      serverUrlInput.disabled = true;
+
+      if (serverResponse) {
+        serverResponse.textContent = 'Connected. Waiting for data...';
+      }
+      console.log('Connected to server:', serverUrl);
     } catch (error) {
-      console.error('Failed to start camera:', error);
+      console.error('Failed to connect:', error);
       if (serverResponse) {
         serverResponse.textContent = `Error: ${error.message}`;
       }
+      cameraManager.stop();
     }
   });
 
   disconnectBtn.addEventListener('click', () => {
+    handleDisconnect();
+  });
+
+  /**
+   * Handles disconnect and cleanup.
+   */
+  function handleDisconnect() {
+    webrtcClient.disconnect();
     cameraManager.stop();
     statsManager.stopCollection();
     statsManager.reset();
+    remoteVideo.srcObject = null;
     connectBtn.disabled = false;
     disconnectBtn.disabled = true;
     resolutionSelect.disabled = false;
-    console.log('Camera stopped');
-  });
+    serverUrlInput.disabled = false;
+    if (serverResponse) {
+      serverResponse.textContent = 'Disconnected.';
+    }
+    console.log('Disconnected');
+  }
+}
+
+/**
+ * Gets the default server URL based on current location.
+ * @return {string} The default WebSocket URL.
+ */
+function getDefaultServerUrl() {
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const host = window.location.host || 'localhost:8080';
+  return `${protocol}//${host}/ws`;
 }
 
 /**
