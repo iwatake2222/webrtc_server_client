@@ -1,0 +1,149 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: |
+  Create an EC2 and connect using SSM, then publish EC2 for WebRTC
+
+Parameters:
+  SystemName:
+    Description: System Name
+    Type: String
+  AvailabilityZone:
+    Description: Availability Zone
+    Type: AWS::EC2::AvailabilityZone::Name
+
+Resources:
+  #-----------------------------------------------------------------------------
+  # VPC
+  #-----------------------------------------------------------------------------
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${SystemName}-vpc
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${SystemName}-igw
+
+  VPCGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  #-----------------------------------------------------------------------------
+  # Public Subnet
+  #-----------------------------------------------------------------------------
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Ref AvailabilityZone
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.0.0/20
+      Tags:
+        - Key: Name
+          Value: !Sub ${SystemName}-public-subnet
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${SystemName}-public-rtb
+
+  PublicSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnetToInternetRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  #-----------------------------------------------------------------------------
+  # EC2
+  #-----------------------------------------------------------------------------
+  EC2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: 'Security Group for an EC2 server'
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        # aiohttp
+        - IpProtocol: tcp
+          FromPort: 5000
+          ToPort: 5000
+          CidrIp: 0.0.0.0/0
+        # aiohttp
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          CidrIp: 0.0.0.0/0
+        # WebRTC
+        - IpProtocol: udp
+          FromPort: 10000
+          ToPort: 20000
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub ${SystemName}-ec2-sg
+
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: ami-0f65fc8c24ec8d2a1  # Ubuntu Server 24.04
+      InstanceType: t3.medium
+      BlockDeviceMappings:
+        - DeviceName: /dev/sda1
+          Ebs:
+            VolumeType: gp3
+            VolumeSize: 128
+            Encrypted: true
+      IamInstanceProfile:
+        !Ref EC2InstanceProfile
+      NetworkInterfaces: 
+        - AssociatePublicIpAddress: true
+          DeviceIndex: 0
+          GroupSet:
+            - !Ref EC2SecurityGroup
+          SubnetId: !Ref PublicSubnet
+      Tags:
+        - Key: Name
+          Value: !Sub ${SystemName}-ec2
+
+  #-----------------------------------------------------------------------------
+  # IAM Role for EC2 server
+  #-----------------------------------------------------------------------------
+  EC2Role:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${SystemName}-ec2-role
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore   # To connect to an instance using Session Manager
+
+  EC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles: 
+        - !Ref EC2Role
+
