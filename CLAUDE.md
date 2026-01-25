@@ -6,7 +6,6 @@ Python + HTML/JavaScript WebRTC サーバー・クライアント
 - Backend: Python (FastAPI/Flask)
 - Frontend: HTML + Vanilla JS
 - Protocol: WebRTC, WebSocket
-- License: Apache 2.0
 
 ## Project Structure
 ```
@@ -19,3 +18,7 @@ client/   # HTML/JS frontend (src/, tests/)
 - 全コードにテスト必須
 - Python: 型ヒント必須、mypy strict mode
 - main直接コミット禁止、PR最大300行
+
+## License
+- Apache 2.0 (Copyright 2026 iwatake2222)
+- 全ソースファイルにライセンスヘッダー必須
