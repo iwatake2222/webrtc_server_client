@@ -1,8 +1,12 @@
 # Production dependencies
-# (none yet)
+aiortc>=1.14.0
+aiohttp>=3.9.0
+opencv-python>=4.8.0
+numpy>=1.24.0
 
 # Development dependencies
 pytest>=8.0.0
+pytest-asyncio>=0.23.0
 flake8>=7.0.0
 pylint>=3.0.0
 mypy>=1.0.0

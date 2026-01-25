@@ -6,6 +6,14 @@ pythonpath = ["."]
 indent-string = "  "
 max-line-length = 80
 
+[tool.pylint.messages_control]
+extension-pkg-whitelist = "cv2"
+generated-members = "cv2.*"
+disable = [
+  "broad-exception-caught",
+  "unused-argument",
+]
+
 [tool.flake8]
 max-line-length = 80
 indent-size = 2

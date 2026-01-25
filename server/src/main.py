@@ -12,15 +12,64 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Main entry point."""
+"""Main entry point for WebRTC server."""
 
-from src.app import greet
+import argparse
+import asyncio
+import logging
+
+from src.webrtc_server import WebRTCServer
 
 
-def main() -> None:
-  """Run the application."""
-  print(greet("WebRTC"))
+def parse_args() -> argparse.Namespace:
+  """Parse command line arguments.
+
+  Returns:
+    Parsed command line arguments.
+  """
+  parser = argparse.ArgumentParser(description="WebRTC Video Processing Server")
+  parser.add_argument(
+      "--host",
+      type=str,
+      default="0.0.0.0",
+      help="Host address to bind to (default: 0.0.0.0)"
+  )
+  parser.add_argument(
+      "--port",
+      type=int,
+      default=8080,
+      help="Port to listen on (default: 8080)"
+  )
+  parser.add_argument(
+      "--log-level",
+      type=str,
+      default="INFO",
+      choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+      help="Logging level (default: INFO)"
+  )
+  return parser.parse_args()
+
+
+async def main() -> None:
+  """Run the WebRTC server."""
+  args = parse_args()
+
+  logging.basicConfig(
+      level=getattr(logging, args.log_level),
+      format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  )
+
+  server = WebRTCServer(host=args.host, port=args.port)
+
+  try:
+    await server.start()
+    while True:
+      await asyncio.sleep(3600)
+  except KeyboardInterrupt:
+    pass
+  finally:
+    await server.stop()
 
 
 if __name__ == "__main__":
-  main()
+  asyncio.run(main())

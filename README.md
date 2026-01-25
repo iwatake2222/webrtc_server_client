@@ -2,6 +2,13 @@
 
 Python + HTML/JavaScript を使用した WebRTC サーバー・クライアントアプリケーション
 
+## 機能
+
+- クライアントからカメラ映像をWebRTC経由でサーバーに送信
+- サーバーでOpenCVによるエッジ検出処理（Canny）
+- 処理済み映像をクライアントにリアルタイム返却
+- DataChannel経由で処理統計（画像サイズ、FPS、処理時間）を送信
+
 ## 環境セットアップ
 
 ### 必要条件
@@ -52,17 +59,29 @@ npm run lint
 
 ## 実行
 
-### Server
-
 ```bash
 cd server
 source .venv/bin/activate
-python -m src.main
+python -m src.main --host 0.0.0.0 --port 8080
 ```
 
-### Client
+ブラウザで `http://localhost:8080` を開く
 
-ブラウザで `client/index.html` を開く
+### コマンドラインオプション
+
+| オプション | デフォルト | 説明 |
+|-----------|-----------|------|
+| `--host` | `0.0.0.0` | バインドするホストアドレス |
+| `--port` | `8080` | リッスンするポート |
+| `--log-level` | `INFO` | ログレベル (DEBUG/INFO/WARNING/ERROR)
+
+### エンドポイント
+
+| URL | 説明 |
+|-----|------|
+| `http://localhost:8080/` | クライアントUI |
+| `ws://localhost:8080/ws` | WebSocketシグナリング |
+| `http://localhost:8080/health` | ヘルスチェック |
 
 ## Deploy for AWS
 
