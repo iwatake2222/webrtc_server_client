@@ -20,6 +20,12 @@
  */
 
 /**
+ * Duration in milliseconds for calculating rolling average.
+ * @const {number}
+ */
+const AVERAGE_WINDOW_MS = 10000;
+
+/**
  * Statistics manager class for displaying video/connection stats.
  */
 export class StatsManager {
@@ -35,6 +41,57 @@ export class StatsManager {
     this.elements = elements;
     /** @type {number|null} */
     this.intervalId = null;
+    /** @type {Array<{timestamp: number, value: number}>} */
+    this.fpsHistory = [];
+    /** @type {Array<{timestamp: number, value: number}>} */
+    this.processingTimeHistory = [];
+    /** @type {Array<{timestamp: number, value: number}>} */
+    this.latencyHistory = [];
+  }
+
+  /**
+   * Adds a value to history and removes entries older than the window.
+   * @param {Array<{timestamp: number, value: number}>} history - History array.
+   * @param {number} value - Value to add.
+   * @private
+   */
+  addToHistory(history, value) {
+    const now = Date.now();
+    history.push({timestamp: now, value});
+    const cutoff = now - AVERAGE_WINDOW_MS;
+    while (history.length > 0 && history[0].timestamp < cutoff) {
+      history.shift();
+    }
+  }
+
+  /**
+   * Calculates the average of values in history.
+   * @param {Array<{timestamp: number, value: number}>} history - History array.
+   * @return {number|null} Average value or null if no data.
+   * @private
+   */
+  calculateAverage(history) {
+    if (history.length === 0) {
+      return null;
+    }
+    const sum = history.reduce((acc, entry) => acc + entry.value, 0);
+    return sum / history.length;
+  }
+
+  /**
+   * Formats a value with its average for display.
+   * @param {number} current - Current value.
+   * @param {number|null} average - Average value or null.
+   * @param {number} decimals - Number of decimal places.
+   * @return {string} Formatted string like "30.2 / 30.1".
+   * @private
+   */
+  formatWithAverage(current, average, decimals) {
+    const currentStr = current.toFixed(decimals);
+    if (average === null) {
+      return `${currentStr} / --`;
+    }
+    return `${currentStr} / ${average.toFixed(decimals)}`;
   }
 
   /**
@@ -48,18 +105,25 @@ export class StatsManager {
    */
   update(stats) {
     if (stats.fps !== undefined && this.elements.fps) {
-      this.elements.fps.textContent = stats.fps.toFixed(1);
+      this.addToHistory(this.fpsHistory, stats.fps);
+      const avg = this.calculateAverage(this.fpsHistory);
+      this.elements.fps.textContent = this.formatWithAverage(stats.fps, avg, 1);
     }
     if (stats.width !== undefined && stats.height !== undefined &&
         this.elements.resolution) {
       this.elements.resolution.textContent = `${stats.width}x${stats.height}`;
     }
     if (stats.processingTime !== undefined && this.elements.processingTime) {
+      this.addToHistory(this.processingTimeHistory, stats.processingTime);
+      const avg = this.calculateAverage(this.processingTimeHistory);
       this.elements.processingTime.textContent =
-        stats.processingTime.toFixed(1);
+        this.formatWithAverage(stats.processingTime, avg, 1);
     }
     if (stats.latency !== undefined && this.elements.latency) {
-      this.elements.latency.textContent = stats.latency.toFixed(0);
+      this.addToHistory(this.latencyHistory, stats.latency);
+      const avg = this.calculateAverage(this.latencyHistory);
+      this.elements.latency.textContent =
+        this.formatWithAverage(stats.latency, avg, 0);
     }
   }
 
@@ -68,17 +132,20 @@ export class StatsManager {
    */
   reset() {
     if (this.elements.fps) {
-      this.elements.fps.textContent = '--';
+      this.elements.fps.textContent = '-- / --';
     }
     if (this.elements.resolution) {
       this.elements.resolution.textContent = '--';
     }
     if (this.elements.processingTime) {
-      this.elements.processingTime.textContent = '--';
+      this.elements.processingTime.textContent = '-- / --';
     }
     if (this.elements.latency) {
-      this.elements.latency.textContent = '--';
+      this.elements.latency.textContent = '-- / --';
     }
+    this.fpsHistory = [];
+    this.processingTimeHistory = [];
+    this.latencyHistory = [];
   }
 
   /**
