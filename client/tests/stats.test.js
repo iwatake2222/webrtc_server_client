@@ -28,7 +28,6 @@ describe('StatsManager', () => {
       resolution: {textContent: ''},
       processingTime: {textContent: ''},
       latency: {textContent: ''},
-      bitrate: {textContent: ''},
     };
     statsManager = new StatsManager(mockElements);
   });
@@ -41,8 +40,6 @@ describe('StatsManager', () => {
     it('should initialize with elements', () => {
       expect(statsManager.elements).toBe(mockElements);
       expect(statsManager.intervalId).toBeNull();
-      expect(statsManager.lastBytes).toBe(0);
-      expect(statsManager.lastTimestamp).toBe(0);
     });
   });
 
@@ -67,11 +64,6 @@ describe('StatsManager', () => {
       expect(mockElements.latency.textContent).toBe('43');
     });
 
-    it('should update bitrate display', () => {
-      statsManager.update({bitrate: 2500.123});
-      expect(mockElements.bitrate.textContent).toBe('2500.1');
-    });
-
     it('should handle partial updates', () => {
       statsManager.update({fps: 30});
       expect(mockElements.fps.textContent).toBe('30.0');
@@ -87,23 +79,13 @@ describe('StatsManager', () => {
   describe('reset', () => {
     it('should reset all displays to default', () => {
       statsManager.update({fps: 30, width: 1920, height: 1080,
-        processingTime: 10, latency: 50, bitrate: 2000});
+        processingTime: 10, latency: 50});
       statsManager.reset();
 
       expect(mockElements.fps.textContent).toBe('--');
       expect(mockElements.resolution.textContent).toBe('--');
       expect(mockElements.processingTime.textContent).toBe('--');
       expect(mockElements.latency.textContent).toBe('--');
-      expect(mockElements.bitrate.textContent).toBe('--');
-    });
-
-    it('should reset internal state', () => {
-      statsManager.lastBytes = 1000;
-      statsManager.lastTimestamp = 5000;
-      statsManager.reset();
-
-      expect(statsManager.lastBytes).toBe(0);
-      expect(statsManager.lastTimestamp).toBe(0);
     });
   });
 
@@ -168,25 +150,6 @@ describe('StatsManager', () => {
 
     it('should handle stop when not running', () => {
       expect(() => statsManager.stopCollection()).not.toThrow();
-    });
-  });
-
-  describe('calculateBitrate', () => {
-    it('should return 0 on first call', () => {
-      const result = statsManager.calculateBitrate(1000, 1000);
-      expect(result).toBe(0);
-    });
-
-    it('should calculate bitrate correctly', () => {
-      statsManager.calculateBitrate(0, 1000);
-      const result = statsManager.calculateBitrate(125000, 2000);
-      expect(result).toBe(1000);
-    });
-
-    it('should return 0 when time diff is zero', () => {
-      statsManager.calculateBitrate(0, 1000);
-      const result = statsManager.calculateBitrate(1000, 1000);
-      expect(result).toBe(0);
     });
   });
 });

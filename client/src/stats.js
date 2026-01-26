@@ -30,16 +30,11 @@ export class StatsManager {
    * @param {HTMLElement} elements.resolution - Element for resolution display.
    * @param {HTMLElement} elements.processingTime - Element for processing time.
    * @param {HTMLElement} elements.latency - Element for latency display.
-   * @param {HTMLElement} elements.bitrate - Element for bitrate display.
    */
   constructor(elements) {
     this.elements = elements;
     /** @type {number|null} */
     this.intervalId = null;
-    /** @type {number} */
-    this.lastBytes = 0;
-    /** @type {number} */
-    this.lastTimestamp = 0;
   }
 
   /**
@@ -50,7 +45,6 @@ export class StatsManager {
    * @param {number} [stats.height] - Video height.
    * @param {number} [stats.processingTime] - Server processing time in ms.
    * @param {number} [stats.latency] - Round trip latency in ms.
-   * @param {number} [stats.bitrate] - Bitrate in kbps.
    */
   update(stats) {
     if (stats.fps !== undefined && this.elements.fps) {
@@ -66,9 +60,6 @@ export class StatsManager {
     }
     if (stats.latency !== undefined && this.elements.latency) {
       this.elements.latency.textContent = stats.latency.toFixed(0);
-    }
-    if (stats.bitrate !== undefined && this.elements.bitrate) {
-      this.elements.bitrate.textContent = stats.bitrate.toFixed(1);
     }
   }
 
@@ -88,11 +79,6 @@ export class StatsManager {
     if (this.elements.latency) {
       this.elements.latency.textContent = '--';
     }
-    if (this.elements.bitrate) {
-      this.elements.bitrate.textContent = '--';
-    }
-    this.lastBytes = 0;
-    this.lastTimestamp = 0;
   }
 
   /**
@@ -122,27 +108,5 @@ export class StatsManager {
       clearInterval(this.intervalId);
       this.intervalId = null;
     }
-  }
-
-  /**
-   * Calculates bitrate from byte counts.
-   * @param {number} currentBytes - Current total bytes.
-   * @param {number} currentTimestamp - Current timestamp in ms.
-   * @return {number} Bitrate in kbps.
-   */
-  calculateBitrate(currentBytes, currentTimestamp) {
-    if (this.lastTimestamp === 0) {
-      this.lastBytes = currentBytes;
-      this.lastTimestamp = currentTimestamp;
-      return 0;
-    }
-    const timeDiff = (currentTimestamp - this.lastTimestamp) / 1000;
-    const byteDiff = currentBytes - this.lastBytes;
-    this.lastBytes = currentBytes;
-    this.lastTimestamp = currentTimestamp;
-    if (timeDiff <= 0) {
-      return 0;
-    }
-    return (byteDiff * 8) / timeDiff / 1000;
   }
 }

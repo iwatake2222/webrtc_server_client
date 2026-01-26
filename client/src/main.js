@@ -63,7 +63,6 @@ async function init() {
     resolution: document.getElementById('statsResolution'),
     processingTime: document.getElementById('statsProcessingTime'),
     latency: document.getElementById('statsLatency'),
-    bitrate: document.getElementById('statsBitrate'),
   });
 
   setupCollapseHandlers(localVideo, remoteVideo);
