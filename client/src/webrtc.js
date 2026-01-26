@@ -41,6 +41,8 @@ export class WebRTCClient {
     this.onConnectionStateChange = null;
     /** @type {function(Error):void|null} */
     this.onError = null;
+    /** @type {number|null} */
+    this.timestampIntervalId = null;
   }
 
   /**
@@ -178,11 +180,47 @@ export class WebRTCClient {
 
     this.dataChannel.onopen = () => {
       console.log('DataChannel opened');
+      this.startTimestampSending();
     };
 
     this.dataChannel.onclose = () => {
       console.log('DataChannel closed');
+      this.stopTimestampSending();
     };
+  }
+
+  /**
+   * Starts sending periodic timestamps for latency measurement.
+   * @private
+   */
+  startTimestampSending() {
+    this.stopTimestampSending();
+    this.timestampIntervalId = setInterval(() => {
+      this.sendTimestamp();
+    }, 100);
+  }
+
+  /**
+   * Stops sending periodic timestamps.
+   * @private
+   */
+  stopTimestampSending() {
+    if (this.timestampIntervalId !== null) {
+      clearInterval(this.timestampIntervalId);
+      this.timestampIntervalId = null;
+    }
+  }
+
+  /**
+   * Sends a timestamp message for latency measurement.
+   */
+  sendTimestamp() {
+    if (this.dataChannel && this.dataChannel.readyState === 'open') {
+      this.dataChannel.send(JSON.stringify({
+        type: 'timestamp',
+        ts: Date.now(),
+      }));
+    }
   }
 
   /**
@@ -201,6 +239,7 @@ export class WebRTCClient {
    * Disconnects from the server.
    */
   disconnect() {
+    this.stopTimestampSending();
     if (this.dataChannel) {
       this.dataChannel.close();
       this.dataChannel = null;

@@ -92,6 +92,7 @@ describe('WebRTCClient', () => {
       expect(webrtcClient.peerConnection).toBeNull();
       expect(webrtcClient.websocket).toBeNull();
       expect(webrtcClient.dataChannel).toBeNull();
+      expect(webrtcClient.timestampIntervalId).toBeNull();
     });
 
     it('should initialize with null callbacks', () => {
@@ -126,6 +127,38 @@ describe('WebRTCClient', () => {
 
     it('should handle disconnect when nothing is connected', () => {
       expect(() => webrtcClient.disconnect()).not.toThrow();
+    });
+
+    it('should stop timestamp sending on disconnect', () => {
+      vi.useFakeTimers();
+      webrtcClient.timestampIntervalId = setInterval(() => {}, 100);
+      webrtcClient.disconnect();
+      expect(webrtcClient.timestampIntervalId).toBeNull();
+      vi.useRealTimers();
+    });
+  });
+
+  describe('timestamp sending', () => {
+    it('should send timestamp via data channel', () => {
+      mockDataChannel.readyState = 'open';
+      webrtcClient.dataChannel = mockDataChannel;
+      webrtcClient.sendTimestamp();
+      expect(mockDataChannel.send).toHaveBeenCalled();
+      const sentData = JSON.parse(mockDataChannel.send.mock.calls[0][0]);
+      expect(sentData.type).toBe('timestamp');
+      expect(typeof sentData.ts).toBe('number');
+    });
+
+    it('should not send timestamp when data channel is not open', () => {
+      mockDataChannel.readyState = 'closed';
+      webrtcClient.dataChannel = mockDataChannel;
+      webrtcClient.sendTimestamp();
+      expect(mockDataChannel.send).not.toHaveBeenCalled();
+    });
+
+    it('should not send timestamp when data channel is null', () => {
+      webrtcClient.dataChannel = null;
+      expect(() => webrtcClient.sendTimestamp()).not.toThrow();
     });
   });
 

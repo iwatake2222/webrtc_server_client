@@ -47,6 +47,7 @@ def test_process_returns_stats_dict() -> None:
 
   _, stats = processor.process(input_frame)
 
+  assert "frame_id" in stats
   assert "width" in stats
   assert "height" in stats
   assert "fps" in stats
@@ -122,3 +123,67 @@ def test_reset_fps() -> None:
   _, stats = processor.process(input_frame)
 
   assert stats["fps"] == 0.0
+
+
+def test_frame_id_increments() -> None:
+  """Test that frame_id increments with each process call."""
+  processor = ImageProcessor()
+  input_frame = np.zeros((100, 100, 3), dtype=np.uint8)
+
+  _, stats1 = processor.process(input_frame)
+  _, stats2 = processor.process(input_frame)
+  _, stats3 = processor.process(input_frame)
+
+  assert stats1["frame_id"] == 1
+  assert stats2["frame_id"] == 2
+  assert stats3["frame_id"] == 3
+
+
+def test_client_timestamp_not_included_by_default() -> None:
+  """Test that client_ts is not included when not set."""
+  processor = ImageProcessor()
+  input_frame = np.zeros((100, 100, 3), dtype=np.uint8)
+
+  _, stats = processor.process(input_frame)
+
+  assert "client_ts" not in stats
+
+
+def test_set_client_timestamp() -> None:
+  """Test setting client timestamp."""
+  processor = ImageProcessor()
+  input_frame = np.zeros((100, 100, 3), dtype=np.uint8)
+
+  processor.set_client_timestamp(1234567890)
+  _, stats = processor.process(input_frame)
+
+  assert stats["client_ts"] == 1234567890
+
+
+def test_clear_client_timestamp() -> None:
+  """Test clearing client timestamp."""
+  processor = ImageProcessor()
+  input_frame = np.zeros((100, 100, 3), dtype=np.uint8)
+
+  processor.set_client_timestamp(1234567890)
+  processor.set_client_timestamp(None)
+  _, stats = processor.process(input_frame)
+
+  assert "client_ts" not in stats
+
+
+def test_reset_clears_all_state() -> None:
+  """Test that reset clears frame_id and client_timestamp."""
+  processor = ImageProcessor()
+  input_frame = np.zeros((100, 100, 3), dtype=np.uint8)
+
+  for _ in range(5):
+    processor.process(input_frame)
+  processor.set_client_timestamp(1234567890)
+
+  processor.reset()
+  _, stats = processor.process(input_frame)
+
+  assert stats["frame_id"] == 1
+  assert stats["fps"] == 0.0
+  assert "client_ts" not in stats

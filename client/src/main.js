@@ -61,8 +61,8 @@ async function init() {
   statsManager = new StatsManager({
     fps: document.getElementById('statsFps'),
     resolution: document.getElementById('statsResolution'),
-    rtt: document.getElementById('statsRtt'),
-    bitrate: document.getElementById('statsBitrate'),
+    processingTime: document.getElementById('statsProcessingTime'),
+    latency: document.getElementById('statsLatency'),
   });
 
   setupCollapseHandlers(localVideo, remoteVideo);
@@ -76,11 +76,14 @@ async function init() {
     if (serverResponse) {
       serverResponse.textContent = JSON.stringify(stats, null, 2);
     }
+    const latencyMs = stats.client_ts !== undefined ?
+      Date.now() - stats.client_ts : undefined;
     statsManager.update({
       fps: stats.fps,
       width: stats.width,
       height: stats.height,
-      rtt: stats.processing_time_ms,
+      processingTime: stats.processing_time_ms,
+      latency: latencyMs,
     });
   };
 
