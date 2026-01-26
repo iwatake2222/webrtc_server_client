@@ -77,12 +77,14 @@ async function init() {
     if (serverResponse) {
       serverResponse.textContent = JSON.stringify(stats, null, 2);
     }
+    const latencyMs = stats.client_ts !== undefined ?
+      Date.now() - stats.client_ts : undefined;
     statsManager.update({
       fps: stats.fps,
       width: stats.width,
       height: stats.height,
       processingTime: stats.processing_time_ms,
-      latency: stats.latency_ms,
+      latency: latencyMs,
     });
   };
 

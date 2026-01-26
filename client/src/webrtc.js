@@ -170,9 +170,6 @@ export class WebRTCClient {
     this.dataChannel.onmessage = (event) => {
       try {
         const stats = JSON.parse(event.data);
-        if (stats.client_ts !== undefined) {
-          stats.latency_ms = Date.now() - stats.client_ts;
-        }
         if (this.onStats) {
           this.onStats(stats);
         }
