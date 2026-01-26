@@ -41,12 +41,18 @@ describe('StatsManager', () => {
       expect(statsManager.elements).toBe(mockElements);
       expect(statsManager.intervalId).toBeNull();
     });
+
+    it('should initialize with empty history arrays', () => {
+      expect(statsManager.fpsHistory).toEqual([]);
+      expect(statsManager.processingTimeHistory).toEqual([]);
+      expect(statsManager.latencyHistory).toEqual([]);
+    });
   });
 
   describe('update', () => {
-    it('should update fps display', () => {
+    it('should update fps display with current and average', () => {
       statsManager.update({fps: 29.97});
-      expect(mockElements.fps.textContent).toBe('30.0');
+      expect(mockElements.fps.textContent).toBe('30.0 / 30.0');
     });
 
     it('should update resolution display', () => {
@@ -54,25 +60,32 @@ describe('StatsManager', () => {
       expect(mockElements.resolution.textContent).toBe('1920x1080');
     });
 
-    it('should update processing time display', () => {
+    it('should update processing time display with current and average', () => {
       statsManager.update({processingTime: 15.5});
-      expect(mockElements.processingTime.textContent).toBe('15.5');
+      expect(mockElements.processingTime.textContent).toBe('15.5 / 15.5');
     });
 
-    it('should update latency display', () => {
+    it('should update latency display with current and average', () => {
       statsManager.update({latency: 42.7});
-      expect(mockElements.latency.textContent).toBe('43');
+      expect(mockElements.latency.textContent).toBe('43 / 43');
     });
 
     it('should handle partial updates', () => {
       statsManager.update({fps: 30});
-      expect(mockElements.fps.textContent).toBe('30.0');
+      expect(mockElements.fps.textContent).toBe('30.0 / 30.0');
       expect(mockElements.resolution.textContent).toBe('');
     });
 
     it('should handle missing elements gracefully', () => {
       const partialManager = new StatsManager({fps: null, resolution: null});
       expect(() => partialManager.update({fps: 30})).not.toThrow();
+    });
+
+    it('should calculate rolling average for multiple updates', () => {
+      statsManager.update({fps: 30});
+      statsManager.update({fps: 32});
+      statsManager.update({fps: 28});
+      expect(mockElements.fps.textContent).toBe('28.0 / 30.0');
     });
   });
 
@@ -82,10 +95,19 @@ describe('StatsManager', () => {
         processingTime: 10, latency: 50});
       statsManager.reset();
 
-      expect(mockElements.fps.textContent).toBe('--');
+      expect(mockElements.fps.textContent).toBe('-- / --');
       expect(mockElements.resolution.textContent).toBe('--');
-      expect(mockElements.processingTime.textContent).toBe('--');
-      expect(mockElements.latency.textContent).toBe('--');
+      expect(mockElements.processingTime.textContent).toBe('-- / --');
+      expect(mockElements.latency.textContent).toBe('-- / --');
+    });
+
+    it('should clear history arrays', () => {
+      statsManager.update({fps: 30, processingTime: 10, latency: 50});
+      statsManager.reset();
+
+      expect(statsManager.fpsHistory).toEqual([]);
+      expect(statsManager.processingTimeHistory).toEqual([]);
+      expect(statsManager.latencyHistory).toEqual([]);
     });
   });
 
@@ -107,7 +129,7 @@ describe('StatsManager', () => {
 
       vi.advanceTimersByTime(100);
       expect(mockCameraManager.getVideoSettings).toHaveBeenCalled();
-      expect(mockElements.fps.textContent).toBe('30.0');
+      expect(mockElements.fps.textContent).toBe('30.0 / 30.0');
       expect(mockElements.resolution.textContent).toBe('1280x720');
 
       vi.useRealTimers();
