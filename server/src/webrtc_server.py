@@ -67,6 +67,21 @@ class VideoTransformTrack(MediaStreamTrack):
       data_channel: The WebRTC data channel.
     """
     self._data_channel = data_channel
+    self._setup_data_channel_handlers()
+
+  def _setup_data_channel_handlers(self) -> None:
+    """Set up message handlers for the data channel."""
+    if self._data_channel is None:
+      return
+
+    @self._data_channel.on("message")
+    def on_message(message: str) -> None:
+      try:
+        data = json.loads(message)
+        if data.get("type") == "timestamp":
+          self._processor.set_client_timestamp(data.get("ts"))
+      except (json.JSONDecodeError, TypeError) as e:
+        logger.debug("Failed to parse data channel message: %s", e)
 
   async def recv(self) -> VideoFrame:
     """Receive a frame, process it, and return the result.

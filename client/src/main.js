@@ -61,7 +61,8 @@ async function init() {
   statsManager = new StatsManager({
     fps: document.getElementById('statsFps'),
     resolution: document.getElementById('statsResolution'),
-    rtt: document.getElementById('statsRtt'),
+    processingTime: document.getElementById('statsProcessingTime'),
+    latency: document.getElementById('statsLatency'),
     bitrate: document.getElementById('statsBitrate'),
   });
 
@@ -80,7 +81,8 @@ async function init() {
       fps: stats.fps,
       width: stats.width,
       height: stats.height,
-      rtt: stats.processing_time_ms,
+      processingTime: stats.processing_time_ms,
+      latency: stats.latency_ms,
     });
   };
 

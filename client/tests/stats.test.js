@@ -26,7 +26,8 @@ describe('StatsManager', () => {
     mockElements = {
       fps: {textContent: ''},
       resolution: {textContent: ''},
-      rtt: {textContent: ''},
+      processingTime: {textContent: ''},
+      latency: {textContent: ''},
       bitrate: {textContent: ''},
     };
     statsManager = new StatsManager(mockElements);
@@ -56,9 +57,14 @@ describe('StatsManager', () => {
       expect(mockElements.resolution.textContent).toBe('1920x1080');
     });
 
-    it('should update rtt display', () => {
-      statsManager.update({rtt: 15.5});
-      expect(mockElements.rtt.textContent).toBe('15.5');
+    it('should update processing time display', () => {
+      statsManager.update({processingTime: 15.5});
+      expect(mockElements.processingTime.textContent).toBe('15.5');
+    });
+
+    it('should update latency display', () => {
+      statsManager.update({latency: 42.7});
+      expect(mockElements.latency.textContent).toBe('43');
     });
 
     it('should update bitrate display', () => {
@@ -80,13 +86,14 @@ describe('StatsManager', () => {
 
   describe('reset', () => {
     it('should reset all displays to default', () => {
-      statsManager.update({fps: 30, width: 1920, height: 1080, rtt: 10,
-        bitrate: 2000});
+      statsManager.update({fps: 30, width: 1920, height: 1080,
+        processingTime: 10, latency: 50, bitrate: 2000});
       statsManager.reset();
 
       expect(mockElements.fps.textContent).toBe('--');
       expect(mockElements.resolution.textContent).toBe('--');
-      expect(mockElements.rtt.textContent).toBe('--');
+      expect(mockElements.processingTime.textContent).toBe('--');
+      expect(mockElements.latency.textContent).toBe('--');
       expect(mockElements.bitrate.textContent).toBe('--');
     });
 

@@ -28,7 +28,8 @@ export class StatsManager {
    * @param {Object} elements - DOM elements for displaying stats.
    * @param {HTMLElement} elements.fps - Element for FPS display.
    * @param {HTMLElement} elements.resolution - Element for resolution display.
-   * @param {HTMLElement} elements.rtt - Element for RTT display.
+   * @param {HTMLElement} elements.processingTime - Element for processing time.
+   * @param {HTMLElement} elements.latency - Element for latency display.
    * @param {HTMLElement} elements.bitrate - Element for bitrate display.
    */
   constructor(elements) {
@@ -47,7 +48,8 @@ export class StatsManager {
    * @param {number} [stats.fps] - Frame rate.
    * @param {number} [stats.width] - Video width.
    * @param {number} [stats.height] - Video height.
-   * @param {number} [stats.rtt] - Round trip time in ms.
+   * @param {number} [stats.processingTime] - Server processing time in ms.
+   * @param {number} [stats.latency] - Round trip latency in ms.
    * @param {number} [stats.bitrate] - Bitrate in kbps.
    */
   update(stats) {
@@ -58,8 +60,12 @@ export class StatsManager {
         this.elements.resolution) {
       this.elements.resolution.textContent = `${stats.width}x${stats.height}`;
     }
-    if (stats.rtt !== undefined && this.elements.rtt) {
-      this.elements.rtt.textContent = stats.rtt.toFixed(1);
+    if (stats.processingTime !== undefined && this.elements.processingTime) {
+      this.elements.processingTime.textContent =
+        stats.processingTime.toFixed(1);
+    }
+    if (stats.latency !== undefined && this.elements.latency) {
+      this.elements.latency.textContent = stats.latency.toFixed(0);
     }
     if (stats.bitrate !== undefined && this.elements.bitrate) {
       this.elements.bitrate.textContent = stats.bitrate.toFixed(1);
@@ -76,8 +82,11 @@ export class StatsManager {
     if (this.elements.resolution) {
       this.elements.resolution.textContent = '--';
     }
-    if (this.elements.rtt) {
-      this.elements.rtt.textContent = '--';
+    if (this.elements.processingTime) {
+      this.elements.processingTime.textContent = '--';
+    }
+    if (this.elements.latency) {
+      this.elements.latency.textContent = '--';
     }
     if (this.elements.bitrate) {
       this.elements.bitrate.textContent = '--';

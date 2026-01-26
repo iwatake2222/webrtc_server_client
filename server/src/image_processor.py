@@ -39,8 +39,18 @@ class ImageProcessor:
     self._canny_threshold1 = canny_threshold1
     self._canny_threshold2 = canny_threshold2
     self._frame_count = 0
+    self._total_frame_count = 0
     self._fps_start_time = time.time()
     self._current_fps = 0.0
+    self._client_timestamp: int | None = None
+
+  def set_client_timestamp(self, timestamp: int | None) -> None:
+    """Set the client timestamp for latency calculation.
+
+    Args:
+      timestamp: Client timestamp in milliseconds, or None to clear.
+    """
+    self._client_timestamp = timestamp
 
   def process(
       self,
@@ -53,7 +63,8 @@ class ImageProcessor:
 
     Returns:
       Tuple of (processed_frame, stats_dict).
-      stats_dict contains width, height, fps, and processing_time_ms.
+      stats_dict contains frame_id, width, height, fps, processing_time_ms,
+      and optionally client_ts for latency calculation.
     """
     start_time = time.time()
 
@@ -68,6 +79,7 @@ class ImageProcessor:
     processing_time_ms = (time.time() - start_time) * 1000
 
     self._frame_count += 1
+    self._total_frame_count += 1
     elapsed = time.time() - self._fps_start_time
     if elapsed >= 1.0:
       self._current_fps = self._frame_count / elapsed
@@ -75,11 +87,15 @@ class ImageProcessor:
       self._fps_start_time = time.time()
 
     stats: dict[str, Any] = {
+        "frame_id": self._total_frame_count,
         "width": width,
         "height": height,
         "fps": round(self._current_fps, 1),
         "processing_time_ms": round(processing_time_ms, 2),
     }
+
+    if self._client_timestamp is not None:
+      stats["client_ts"] = self._client_timestamp
 
     return processed, stats
 
@@ -88,3 +104,9 @@ class ImageProcessor:
     self._frame_count = 0
     self._fps_start_time = time.time()
     self._current_fps = 0.0
+
+  def reset(self) -> None:
+    """Reset all state including frame count and client timestamp."""
+    self.reset_fps()
+    self._total_frame_count = 0
+    self._client_timestamp = None
