@@ -26,6 +26,7 @@ client/   # HTML/JS frontend (src/, tests/)
 |-----------|-------|------|
 | ブランチ作成時 | `branch` | 命名規則に従ったブランチ作成 |
 | コード変更後 | `test` | 全テスト実行 |
+| コミット前 | `pre-commit` | ブランチ状態確認（マージ済みブランチでの作業防止） |
 | コミット前 | `lint` | 静的解析（flake8, pylint, ESLint） |
 | コミット前 | `typecheck` | 型チェック（mypy） |
 | PR作成前 | `review` | 変更内容のレビュー（300行制限確認含む） |
@@ -35,11 +36,12 @@ client/   # HTML/JS frontend (src/, tests/)
 1. `branch` → ブランチ作成
 2. コード実装
 3. `test` → テスト実行
-4. `lint` → スタイルチェック
-5. `typecheck` → 型チェック
-6. コミット
-7. `review` → 変更レビュー
-8. `pr` → PR作成
+4. `pre-commit` → ブランチ状態確認
+5. `lint` → スタイルチェック
+6. `typecheck` → 型チェック
+7. コミット
+8. `review` → 変更レビュー
+9. `pr` → PR作成
 
 ## License
 - Apache 2.0 (Copyright 2026 iwatake2222)
