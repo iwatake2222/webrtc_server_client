@@ -79,19 +79,32 @@ export class StatsManager {
   }
 
   /**
+   * Pads a number string to a fixed width.
+   * @param {string} str - Number string to pad.
+   * @param {number} width - Total width including decimal point.
+   * @return {string} Padded string.
+   * @private
+   */
+  padNumber(str, width) {
+    return str.padStart(width, '\u00A0');
+  }
+
+  /**
    * Formats a value with its average for display.
    * @param {number} current - Current value.
    * @param {number|null} average - Average value or null.
    * @param {number} decimals - Number of decimal places.
+   * @param {number} width - Total width for each number.
    * @return {string} Formatted string like "30.2 / 30.1".
    * @private
    */
-  formatWithAverage(current, average, decimals) {
-    const currentStr = current.toFixed(decimals);
+  formatWithAverage(current, average, decimals, width) {
+    const currentStr = this.padNumber(current.toFixed(decimals), width);
     if (average === null) {
-      return `${currentStr} / --`;
+      return `${currentStr} / ${'--'.padStart(width, '\u00A0')}`;
     }
-    return `${currentStr} / ${average.toFixed(decimals)}`;
+    const avgStr = this.padNumber(average.toFixed(decimals), width);
+    return `${currentStr} / ${avgStr}`;
   }
 
   /**
@@ -107,7 +120,8 @@ export class StatsManager {
     if (stats.fps !== undefined && this.elements.fps) {
       this.addToHistory(this.fpsHistory, stats.fps);
       const avg = this.calculateAverage(this.fpsHistory);
-      this.elements.fps.textContent = this.formatWithAverage(stats.fps, avg, 1);
+      this.elements.fps.textContent =
+        this.formatWithAverage(stats.fps, avg, 1, 5);
     }
     if (stats.width !== undefined && stats.height !== undefined &&
         this.elements.resolution) {
@@ -117,13 +131,13 @@ export class StatsManager {
       this.addToHistory(this.processingTimeHistory, stats.processingTime);
       const avg = this.calculateAverage(this.processingTimeHistory);
       this.elements.processingTime.textContent =
-        this.formatWithAverage(stats.processingTime, avg, 1);
+        this.formatWithAverage(stats.processingTime, avg, 1, 6);
     }
     if (stats.latency !== undefined && this.elements.latency) {
       this.addToHistory(this.latencyHistory, stats.latency);
       const avg = this.calculateAverage(this.latencyHistory);
       this.elements.latency.textContent =
-        this.formatWithAverage(stats.latency, avg, 0);
+        this.formatWithAverage(stats.latency, avg, 0, 5);
     }
   }
 
@@ -131,17 +145,18 @@ export class StatsManager {
    * Resets all statistics to default values.
    */
   reset() {
+    const pad = (width) => '--'.padStart(width, '\u00A0');
     if (this.elements.fps) {
-      this.elements.fps.textContent = '-- / --';
+      this.elements.fps.textContent = `${pad(5)} / ${pad(5)}`;
     }
     if (this.elements.resolution) {
       this.elements.resolution.textContent = '--';
     }
     if (this.elements.processingTime) {
-      this.elements.processingTime.textContent = '-- / --';
+      this.elements.processingTime.textContent = `${pad(6)} / ${pad(6)}`;
     }
     if (this.elements.latency) {
-      this.elements.latency.textContent = '-- / --';
+      this.elements.latency.textContent = `${pad(5)} / ${pad(5)}`;
     }
     this.fpsHistory = [];
     this.processingTimeHistory = [];
