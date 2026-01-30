@@ -174,6 +174,65 @@ describe('WebRTCClient', () => {
     });
   });
 
+  describe('getOutboundVideoStats', () => {
+    it('should return null when not connected', async () => {
+      const stats = await webrtcClient.getOutboundVideoStats();
+      expect(stats).toBeNull();
+    });
+
+    it('should return framesPerSecond from outbound-rtp stats', async () => {
+      const mockStats = new Map([
+        ['outbound-rtp-video', {
+          type: 'outbound-rtp',
+          kind: 'video',
+          framesPerSecond: 30,
+        }],
+      ]);
+      mockPeerConnection.getStats = vi.fn(() => Promise.resolve(mockStats));
+      webrtcClient.peerConnection = mockPeerConnection;
+
+      const stats = await webrtcClient.getOutboundVideoStats();
+      expect(stats).toEqual({framesPerSecond: 30});
+    });
+
+    it('should return 0 for framesPerSecond when not available', async () => {
+      const mockStats = new Map([
+        ['outbound-rtp-video', {
+          type: 'outbound-rtp',
+          kind: 'video',
+        }],
+      ]);
+      mockPeerConnection.getStats = vi.fn(() => Promise.resolve(mockStats));
+      webrtcClient.peerConnection = mockPeerConnection;
+
+      const stats = await webrtcClient.getOutboundVideoStats();
+      expect(stats).toEqual({framesPerSecond: 0});
+    });
+
+    it('should return null when no video outbound-rtp stats', async () => {
+      const mockStats = new Map([
+        ['outbound-rtp-audio', {
+          type: 'outbound-rtp',
+          kind: 'audio',
+        }],
+      ]);
+      mockPeerConnection.getStats = vi.fn(() => Promise.resolve(mockStats));
+      webrtcClient.peerConnection = mockPeerConnection;
+
+      const stats = await webrtcClient.getOutboundVideoStats();
+      expect(stats).toBeNull();
+    });
+
+    it('should handle getStats error gracefully', async () => {
+      mockPeerConnection.getStats = vi.fn(() =>
+        Promise.reject(new Error('Stats error')));
+      webrtcClient.peerConnection = mockPeerConnection;
+
+      const stats = await webrtcClient.getOutboundVideoStats();
+      expect(stats).toBeNull();
+    });
+  });
+
   describe('callbacks', () => {
     it('should allow setting onStats callback', () => {
       const callback = vi.fn();

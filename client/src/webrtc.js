@@ -261,4 +261,26 @@ export class WebRTCClient {
   getConnectionState() {
     return this.peerConnection ? this.peerConnection.connectionState : null;
   }
+
+  /**
+   * Gets outbound video statistics including camera FPS.
+   * @return {Promise<{framesPerSecond: number}|null>} Outbound stats or null.
+   */
+  async getOutboundVideoStats() {
+    if (!this.peerConnection) return null;
+
+    try {
+      const stats = await this.peerConnection.getStats();
+      for (const report of stats.values()) {
+        if (report.type === 'outbound-rtp' && report.kind === 'video') {
+          return {
+            framesPerSecond: report.framesPerSecond || 0,
+          };
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to get outbound stats:', error);
+    }
+    return null;
+  }
 }

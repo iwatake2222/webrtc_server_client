@@ -59,6 +59,7 @@ async function init() {
   serverUrlInput.value = getDefaultServerUrl();
 
   statsManager = new StatsManager({
+    cameraFps: document.getElementById('statsCameraFps'),
     fps: document.getElementById('statsFps'),
     resolution: document.getElementById('statsResolution'),
     processingTime: document.getElementById('statsProcessingTime'),
@@ -112,6 +113,8 @@ async function init() {
 
       const serverUrl = serverUrlInput.value || getDefaultServerUrl();
       await webrtcClient.connect(serverUrl, stream);
+
+      statsManager.startWebRTCStatsCollection(webrtcClient);
 
       connectBtn.disabled = true;
       disconnectBtn.disabled = false;

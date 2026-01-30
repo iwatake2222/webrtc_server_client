@@ -24,6 +24,7 @@ describe('StatsManager', () => {
 
   beforeEach(() => {
     mockElements = {
+      cameraFps: {textContent: ''},
       fps: {textContent: ''},
       resolution: {textContent: ''},
       processingTime: {textContent: ''},
@@ -43,6 +44,7 @@ describe('StatsManager', () => {
     });
 
     it('should initialize with empty history arrays', () => {
+      expect(statsManager.cameraFpsHistory).toEqual([]);
       expect(statsManager.fpsHistory).toEqual([]);
       expect(statsManager.processingTimeHistory).toEqual([]);
       expect(statsManager.latencyHistory).toEqual([]);
@@ -50,6 +52,12 @@ describe('StatsManager', () => {
   });
 
   describe('update', () => {
+    it('should update camera fps display with current and average', () => {
+      statsManager.update({cameraFps: 29.97});
+      expect(mockElements.cameraFps.textContent).toContain('30.0');
+      expect(mockElements.cameraFps.textContent).toContain('/');
+    });
+
     it('should update fps display with current and average', () => {
       statsManager.update({fps: 29.97});
       expect(mockElements.fps.textContent).toContain('30.0');
@@ -95,10 +103,12 @@ describe('StatsManager', () => {
 
   describe('reset', () => {
     it('should reset all displays to default', () => {
-      statsManager.update({fps: 30, width: 1920, height: 1080,
+      statsManager.update({cameraFps: 30, fps: 30, width: 1920, height: 1080,
         processingTime: 10, latency: 50});
       statsManager.reset();
 
+      expect(mockElements.cameraFps.textContent).toContain('--');
+      expect(mockElements.cameraFps.textContent).toContain('/');
       expect(mockElements.fps.textContent).toContain('--');
       expect(mockElements.fps.textContent).toContain('/');
       expect(mockElements.resolution.textContent).toBe('--');
@@ -107,9 +117,11 @@ describe('StatsManager', () => {
     });
 
     it('should clear history arrays', () => {
-      statsManager.update({fps: 30, processingTime: 10, latency: 50});
+      statsManager.update({cameraFps: 30, fps: 30, processingTime: 10,
+        latency: 50});
       statsManager.reset();
 
+      expect(statsManager.cameraFpsHistory).toEqual([]);
       expect(statsManager.fpsHistory).toEqual([]);
       expect(statsManager.processingTimeHistory).toEqual([]);
       expect(statsManager.latencyHistory).toEqual([]);
@@ -152,6 +164,46 @@ describe('StatsManager', () => {
       const firstIntervalId = statsManager.intervalId;
 
       statsManager.startLocalStatsCollection(mockCameraManager, 200);
+      expect(statsManager.intervalId).not.toBe(firstIntervalId);
+
+      vi.useRealTimers();
+    });
+  });
+
+  describe('startWebRTCStatsCollection', () => {
+    it('should start periodic WebRTC stats collection', async () => {
+      vi.useFakeTimers();
+
+      const mockWebrtcClient = {
+        getOutboundVideoStats: vi.fn(() => Promise.resolve({
+          framesPerSecond: 30,
+        })),
+      };
+
+      statsManager.startWebRTCStatsCollection(mockWebrtcClient, 100);
+
+      expect(statsManager.intervalId).not.toBeNull();
+
+      vi.advanceTimersByTime(100);
+      await Promise.resolve();
+      expect(mockWebrtcClient.getOutboundVideoStats).toHaveBeenCalled();
+
+      vi.useRealTimers();
+    });
+
+    it('should stop previous collection before starting new one', () => {
+      vi.useFakeTimers();
+
+      const mockWebrtcClient = {
+        getOutboundVideoStats: vi.fn(() => Promise.resolve({
+          framesPerSecond: 30,
+        })),
+      };
+
+      statsManager.startWebRTCStatsCollection(mockWebrtcClient, 100);
+      const firstIntervalId = statsManager.intervalId;
+
+      statsManager.startWebRTCStatsCollection(mockWebrtcClient, 200);
       expect(statsManager.intervalId).not.toBe(firstIntervalId);
 
       vi.useRealTimers();
