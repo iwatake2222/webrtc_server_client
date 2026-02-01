@@ -59,6 +59,13 @@ class VideoTransformTrack(MediaStreamTrack):
     self._track = track
     self._processor = processor
     self._data_channel = data_channel
+    self._latest_frame: Optional[VideoFrame] = None
+    self._latest_client_ts: Optional[int] = None
+    self._current_client_ts: Optional[int] = None
+    self._frame_lock = asyncio.Lock()
+    self._frame_ready = asyncio.Event()
+    self._receiver_task: Optional[asyncio.Task[None]] = None
+    self._running = True
 
   def set_data_channel(self, data_channel: RTCDataChannel) -> None:
     """Set the data channel for sending stats.
@@ -79,21 +86,52 @@ class VideoTransformTrack(MediaStreamTrack):
       try:
         data = json.loads(message)
         if data.get("type") == "timestamp":
-          self._processor.set_client_timestamp(data.get("ts"))
+          self._current_client_ts = data.get("ts")
       except (json.JSONDecodeError, TypeError) as e:
         logger.debug("Failed to parse data channel message: %s", e)
+
+  async def _start_receiver(self) -> None:
+    """Start the background frame receiver task."""
+    if self._receiver_task is None:
+      self._receiver_task = asyncio.create_task(self._receive_frames())
+
+  async def _receive_frames(self) -> None:
+    """Continuously receive frames, keeping only the latest one."""
+    while self._running:
+      try:
+        frame = cast(VideoFrame, await self._track.recv())
+        async with self._frame_lock:
+          self._latest_frame = frame
+          self._latest_client_ts = self._current_client_ts
+          self._frame_ready.set()
+      except Exception as e:
+        logger.debug("Frame receiver stopped: %s", e)
+        break
 
   async def recv(self) -> VideoFrame:
     """Receive a frame, process it, and return the result.
 
-    Processing is offloaded to a thread pool to avoid blocking
-    the event loop during CPU-intensive image processing.
+    Only the latest frame is processed; older frames are dropped
+    to prevent delay accumulation when processing is slow.
 
     Returns:
       The processed video frame with edge detection applied.
     """
-    frame = cast(VideoFrame, await self._track.recv())
+    await self._start_receiver()
 
+    await self._frame_ready.wait()
+
+    async with self._frame_lock:
+      frame = self._latest_frame
+      client_ts = self._latest_client_ts
+      self._latest_frame = None
+      self._latest_client_ts = None
+      self._frame_ready.clear()
+
+    if frame is None:
+      raise Exception("No frame available")
+
+    self._processor.set_client_timestamp(client_ts)
     img = frame.to_ndarray(format="bgr24")
 
     loop = asyncio.get_event_loop()
@@ -112,6 +150,12 @@ class VideoTransformTrack(MediaStreamTrack):
     new_frame.pts = frame.pts
     new_frame.time_base = frame.time_base
     return new_frame
+
+  def stop(self) -> None:
+    """Stop the frame receiver task."""
+    self._running = False
+    if self._receiver_task is not None:
+      self._receiver_task.cancel()
 
 
 class WebRTCServer:
