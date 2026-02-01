@@ -61,7 +61,9 @@ class VideoTransformTrack(MediaStreamTrack):
     self._data_channel = data_channel
     self._latest_frame: Optional[VideoFrame] = None
     self._latest_client_ts: Optional[int] = None
+    self._latest_client_frame_id: Optional[int] = None
     self._current_client_ts: Optional[int] = None
+    self._current_client_frame_id: Optional[int] = None
     self._frame_lock = asyncio.Lock()
     self._frame_ready = asyncio.Event()
     self._receiver_task: Optional[asyncio.Task[None]] = None
@@ -87,6 +89,7 @@ class VideoTransformTrack(MediaStreamTrack):
         data = json.loads(message)
         if data.get("type") == "timestamp":
           self._current_client_ts = data.get("ts")
+          self._current_client_frame_id = data.get("client_frame_id")
       except (json.JSONDecodeError, TypeError) as e:
         logger.debug("Failed to parse data channel message: %s", e)
 
@@ -103,6 +106,7 @@ class VideoTransformTrack(MediaStreamTrack):
         async with self._frame_lock:
           self._latest_frame = frame
           self._latest_client_ts = self._current_client_ts
+          self._latest_client_frame_id = self._current_client_frame_id
           self._frame_ready.set()
       except Exception as e:
         logger.debug("Frame receiver stopped: %s", e)
@@ -124,14 +128,17 @@ class VideoTransformTrack(MediaStreamTrack):
     async with self._frame_lock:
       frame = self._latest_frame
       client_ts = self._latest_client_ts
+      client_frame_id = self._latest_client_frame_id
       self._latest_frame = None
       self._latest_client_ts = None
+      self._latest_client_frame_id = None
       self._frame_ready.clear()
 
     if frame is None:
       raise Exception("No frame available")
 
     self._processor.set_client_timestamp(client_ts)
+    self._processor.set_client_frame_id(client_frame_id)
     img = frame.to_ndarray(format="bgr24")
 
     loop = asyncio.get_event_loop()

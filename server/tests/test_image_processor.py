@@ -187,3 +187,48 @@ def test_reset_clears_all_state() -> None:
   assert stats["frame_id"] == 1
   assert stats["fps"] == 0.0
   assert "client_ts" not in stats
+
+
+def test_client_frame_id_not_included_by_default() -> None:
+  """Test that client_frame_id is not included when not set."""
+  processor = ImageProcessor()
+  input_frame = np.zeros((100, 100, 3), dtype=np.uint8)
+
+  _, stats = processor.process(input_frame)
+
+  assert "client_frame_id" not in stats
+
+
+def test_set_client_frame_id() -> None:
+  """Test setting client frame ID."""
+  processor = ImageProcessor()
+  input_frame = np.zeros((100, 100, 3), dtype=np.uint8)
+
+  processor.set_client_frame_id(42)
+  _, stats = processor.process(input_frame)
+
+  assert stats["client_frame_id"] == 42
+
+
+def test_clear_client_frame_id() -> None:
+  """Test clearing client frame ID."""
+  processor = ImageProcessor()
+  input_frame = np.zeros((100, 100, 3), dtype=np.uint8)
+
+  processor.set_client_frame_id(42)
+  processor.set_client_frame_id(None)
+  _, stats = processor.process(input_frame)
+
+  assert "client_frame_id" not in stats
+
+
+def test_reset_clears_client_frame_id() -> None:
+  """Test that reset clears client_frame_id."""
+  processor = ImageProcessor()
+  input_frame = np.zeros((100, 100, 3), dtype=np.uint8)
+
+  processor.set_client_frame_id(42)
+  processor.reset()
+  _, stats = processor.process(input_frame)
+
+  assert "client_frame_id" not in stats

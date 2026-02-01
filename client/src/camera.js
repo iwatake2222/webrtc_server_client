@@ -36,6 +36,8 @@ export class CameraManager {
     /** @type {number} */
     this.frameCount = 0;
     /** @type {number} */
+    this.totalFrameCount = 0;
+    /** @type {number} */
     this.lastFpsCalcTime = 0;
     /** @type {number} */
     this.currentFps = 0;
@@ -65,6 +67,7 @@ export class CameraManager {
    */
   stop() {
     this.stopFrameCounting();
+    this.totalFrameCount = 0;
     if (this.stream) {
       this.stream.getTracks().forEach((track) => track.stop());
       this.stream = null;
@@ -129,6 +132,7 @@ export class CameraManager {
    */
   startFrameCounting() {
     this.frameCount = 0;
+    this.totalFrameCount = 0;
     this.lastFpsCalcTime = performance.now();
     this.currentFps = 0;
     this.countFrame();
@@ -152,6 +156,7 @@ export class CameraManager {
       return;
     }
     this.frameCount++;
+    this.totalFrameCount++;
     const now = performance.now();
     const elapsed = now - this.lastFpsCalcTime;
     if (elapsed >= 1000) {
@@ -176,5 +181,13 @@ export class CameraManager {
     }
     const settings = this.getVideoSettings();
     return settings ? settings.frameRate : 0;
+  }
+
+  /**
+   * Gets the total frame count since camera started.
+   * @return {number} The total frame count.
+   */
+  getTotalFrameCount() {
+    return this.totalFrameCount;
   }
 }

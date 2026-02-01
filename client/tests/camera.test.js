@@ -64,6 +64,7 @@ describe('CameraManager', () => {
 
     it('should initialize frame counting properties', () => {
       expect(cameraManager.frameCount).toBe(0);
+      expect(cameraManager.totalFrameCount).toBe(0);
       expect(cameraManager.lastFpsCalcTime).toBe(0);
       expect(cameraManager.currentFps).toBe(0);
       expect(cameraManager.frameCallbackId).toBeNull();
@@ -199,6 +200,25 @@ describe('CameraManager', () => {
       cameraManager.stop();
 
       expect(cameraManager.currentFps).toBe(0);
+    });
+
+    it('should reset totalFrameCount on stop', async () => {
+      await cameraManager.start(mockVideoElement);
+      cameraManager.totalFrameCount = 100;
+      cameraManager.stop();
+
+      expect(cameraManager.totalFrameCount).toBe(0);
+    });
+  });
+
+  describe('getTotalFrameCount', () => {
+    it('should return 0 initially', () => {
+      expect(cameraManager.getTotalFrameCount()).toBe(0);
+    });
+
+    it('should return current total frame count', () => {
+      cameraManager.totalFrameCount = 42;
+      expect(cameraManager.getTotalFrameCount()).toBe(42);
     });
   });
 });

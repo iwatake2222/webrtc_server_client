@@ -102,6 +102,8 @@ async function init() {
     }
   };
 
+  webrtcClient.getClientFrameId = () => cameraManager.getTotalFrameCount();
+
   connectBtn.addEventListener('click', async () => {
     try {
       const constraints = buildConstraints(resolutionSelect.value);

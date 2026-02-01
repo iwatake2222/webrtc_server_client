@@ -43,6 +43,7 @@ class ImageProcessor:
     self._fps_start_time = time.time()
     self._current_fps = 0.0
     self._client_timestamp: int | None = None
+    self._client_frame_id: int | None = None
 
   def set_client_timestamp(self, timestamp: int | None) -> None:
     """Set the client timestamp for latency calculation.
@@ -51,6 +52,14 @@ class ImageProcessor:
       timestamp: Client timestamp in milliseconds, or None to clear.
     """
     self._client_timestamp = timestamp
+
+  def set_client_frame_id(self, frame_id: int | None) -> None:
+    """Set the client frame ID for tracking.
+
+    Args:
+      frame_id: Client frame ID, or None to clear.
+    """
+    self._client_frame_id = frame_id
 
   def process(
       self,
@@ -97,6 +106,9 @@ class ImageProcessor:
     if self._client_timestamp is not None:
       stats["client_ts"] = self._client_timestamp
 
+    if self._client_frame_id is not None:
+      stats["client_frame_id"] = self._client_frame_id
+
     return processed, stats
 
   def reset_fps(self) -> None:
@@ -110,3 +122,4 @@ class ImageProcessor:
     self.reset_fps()
     self._total_frame_count = 0
     self._client_timestamp = None
+    self._client_frame_id = None
