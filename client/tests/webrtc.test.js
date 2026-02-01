@@ -173,7 +173,7 @@ describe('WebRTCClient', () => {
       expect(sentData.client_frame_id).toBe(42);
     });
 
-    it('should not include client_frame_id when getClientFrameId is null', () => {
+    it('should not include client_frame_id when callback is null', () => {
       mockDataChannel.readyState = 'open';
       webrtcClient.dataChannel = mockDataChannel;
       webrtcClient.getClientFrameId = null;
