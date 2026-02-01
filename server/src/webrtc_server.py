@@ -112,8 +112,8 @@ class VideoTransformTrack(MediaStreamTrack):
         async with self._frame_state["lock"]:
           self._frame_state["latest"] = frame
           self._client_data["latest_ts"] = self._client_data["current_ts"]
-          self._client_data["latest_frame_id"] = \
-              self._client_data["current_frame_id"]
+          current_frame_id = self._client_data["current_frame_id"]
+          self._client_data["latest_frame_id"] = current_frame_id
           self._frame_state["ready"].set()
       except Exception as e:
         logger.debug("Frame receiver stopped: %s", e)
