@@ -11,6 +11,8 @@ extension-pkg-whitelist = "cv2"
 generated-members = "cv2.*"
 disable = [
   "broad-exception-caught",
+  "broad-exception-raised",
+  "too-many-instance-attributes",
   "unused-argument",
 ]
 
