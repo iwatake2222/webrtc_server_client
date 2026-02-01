@@ -100,6 +100,7 @@ describe('WebRTCClient', () => {
       expect(webrtcClient.onRemoteStream).toBeNull();
       expect(webrtcClient.onConnectionStateChange).toBeNull();
       expect(webrtcClient.onError).toBeNull();
+      expect(webrtcClient.getClientFrameId).toBeNull();
     });
 
     it('should initialize with null outbound stats tracking', () => {
@@ -160,6 +161,25 @@ describe('WebRTCClient', () => {
       const sentData = JSON.parse(mockDataChannel.send.mock.calls[0][0]);
       expect(sentData.type).toBe('timestamp');
       expect(typeof sentData.ts).toBe('number');
+    });
+
+    it('should include client_frame_id when getClientFrameId is set', () => {
+      mockDataChannel.readyState = 'open';
+      webrtcClient.dataChannel = mockDataChannel;
+      webrtcClient.getClientFrameId = () => 42;
+      webrtcClient.sendTimestamp();
+      const sentData = JSON.parse(mockDataChannel.send.mock.calls[0][0]);
+      expect(sentData.type).toBe('timestamp');
+      expect(sentData.client_frame_id).toBe(42);
+    });
+
+    it('should not include client_frame_id when callback is null', () => {
+      mockDataChannel.readyState = 'open';
+      webrtcClient.dataChannel = mockDataChannel;
+      webrtcClient.getClientFrameId = null;
+      webrtcClient.sendTimestamp();
+      const sentData = JSON.parse(mockDataChannel.send.mock.calls[0][0]);
+      expect(sentData.client_frame_id).toBeUndefined();
     });
 
     it('should not send timestamp when data channel is not open', () => {

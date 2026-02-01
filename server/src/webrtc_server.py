@@ -18,7 +18,7 @@ import asyncio
 import json
 import logging
 from pathlib import Path
-from typing import Optional, cast
+from typing import Any, Optional, cast
 
 from aiohttp import web
 from aiortc import (
@@ -59,6 +59,21 @@ class VideoTransformTrack(MediaStreamTrack):
     self._track = track
     self._processor = processor
     self._data_channel = data_channel
+    self._frame_state: dict[str, Any] = {
+        "latest": None,
+        "lock": asyncio.Lock(),
+        "ready": asyncio.Event(),
+    }
+    self._client_data: dict[str, int | None] = {
+        "current_ts": None,
+        "current_frame_id": None,
+        "latest_ts": None,
+        "latest_frame_id": None,
+    }
+    self._receiver: dict[str, Any] = {
+        "task": None,
+        "running": True,
+    }
 
   def set_data_channel(self, data_channel: RTCDataChannel) -> None:
     """Set the data channel for sending stats.
@@ -79,26 +94,63 @@ class VideoTransformTrack(MediaStreamTrack):
       try:
         data = json.loads(message)
         if data.get("type") == "timestamp":
-          self._processor.set_client_timestamp(data.get("ts"))
+          self._client_data["current_ts"] = data.get("ts")
+          self._client_data["current_frame_id"] = data.get("client_frame_id")
       except (json.JSONDecodeError, TypeError) as e:
         logger.debug("Failed to parse data channel message: %s", e)
+
+  async def _start_receiver(self) -> None:
+    """Start the background frame receiver task."""
+    if self._receiver["task"] is None:
+      self._receiver["task"] = asyncio.create_task(self._receive_frames())
+
+  async def _receive_frames(self) -> None:
+    """Continuously receive frames, keeping only the latest one."""
+    while self._receiver["running"]:
+      try:
+        frame = cast(VideoFrame, await self._track.recv())
+        async with self._frame_state["lock"]:
+          self._frame_state["latest"] = frame
+          self._client_data["latest_ts"] = self._client_data["current_ts"]
+          current_frame_id = self._client_data["current_frame_id"]
+          self._client_data["latest_frame_id"] = current_frame_id
+          self._frame_state["ready"].set()
+      except Exception as e:
+        logger.debug("Frame receiver stopped: %s", e)
+        break
 
   async def recv(self) -> VideoFrame:
     """Receive a frame, process it, and return the result.
 
-    Processing is offloaded to a thread pool to avoid blocking
-    the event loop during CPU-intensive image processing.
+    Only the latest frame is processed; older frames are dropped
+    to prevent delay accumulation when processing is slow.
 
     Returns:
       The processed video frame with edge detection applied.
     """
-    frame = cast(VideoFrame, await self._track.recv())
+    await self._start_receiver()
 
+    await self._frame_state["ready"].wait()
+
+    async with self._frame_state["lock"]:
+      frame = self._frame_state["latest"]
+      client_ts = self._client_data["latest_ts"]
+      client_frame_id = self._client_data["latest_frame_id"]
+      self._frame_state["latest"] = None
+      self._client_data["latest_ts"] = None
+      self._client_data["latest_frame_id"] = None
+      self._frame_state["ready"].clear()
+
+    if frame is None:
+      raise Exception("No frame available")
+
+    self._processor.set_client_timestamp(client_ts)
+    self._processor.set_client_frame_id(client_frame_id)
     img = frame.to_ndarray(format="bgr24")
 
     loop = asyncio.get_event_loop()
     processed_img, stats = await loop.run_in_executor(
-        None, self._processor.process, img  # type: ignore[arg-type]
+        None, self._processor.process, img
     )
 
     if self._data_channel is not None:
@@ -112,6 +164,12 @@ class VideoTransformTrack(MediaStreamTrack):
     new_frame.pts = frame.pts
     new_frame.time_base = frame.time_base
     return new_frame
+
+  def stop(self) -> None:
+    """Stop the frame receiver task."""
+    self._receiver["running"] = False
+    if self._receiver["task"] is not None:
+      self._receiver["task"].cancel()
 
 
 class WebRTCServer:

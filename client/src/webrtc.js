@@ -41,6 +41,8 @@ export class WebRTCClient {
     this.onConnectionStateChange = null;
     /** @type {function(Error):void|null} */
     this.onError = null;
+    /** @type {function():number|null} */
+    this.getClientFrameId = null;
     /** @type {number|null} */
     this.timestampIntervalId = null;
     /** @type {number|null} */
@@ -220,10 +222,14 @@ export class WebRTCClient {
    */
   sendTimestamp() {
     if (this.dataChannel && this.dataChannel.readyState === 'open') {
-      this.dataChannel.send(JSON.stringify({
+      const message = {
         type: 'timestamp',
         ts: Date.now(),
-      }));
+      };
+      if (this.getClientFrameId) {
+        message.client_frame_id = this.getClientFrameId();
+      }
+      this.dataChannel.send(JSON.stringify(message));
     }
   }
 
