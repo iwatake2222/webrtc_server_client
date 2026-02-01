@@ -33,8 +33,9 @@ export class StatsManager {
    * Creates a new StatsManager instance.
    * @param {Object} elements - DOM elements for displaying stats.
    * @param {HTMLElement} elements.cameraFps - Element for camera FPS display.
+   * @param {HTMLElement} elements.cameraResolution - Camera resolution element.
    * @param {HTMLElement} elements.fps - Element for server FPS display.
-   * @param {HTMLElement} elements.resolution - Element for resolution display.
+   * @param {HTMLElement} elements.resolution - Element for server resolution.
    * @param {HTMLElement} elements.processingTime - Element for processing time.
    * @param {HTMLElement} elements.latency - Element for latency display.
    */
@@ -114,9 +115,11 @@ export class StatsManager {
    * Updates the statistics display.
    * @param {Object} stats - Statistics data.
    * @param {number} [stats.cameraFps] - Camera frame rate.
+   * @param {number} [stats.cameraWidth] - Camera video width.
+   * @param {number} [stats.cameraHeight] - Camera video height.
    * @param {number} [stats.fps] - Server frame rate.
-   * @param {number} [stats.width] - Video width.
-   * @param {number} [stats.height] - Video height.
+   * @param {number} [stats.width] - Server video width.
+   * @param {number} [stats.height] - Server video height.
    * @param {number} [stats.processingTime] - Server processing time in ms.
    * @param {number} [stats.latency] - Round trip latency in ms.
    */
@@ -126,6 +129,11 @@ export class StatsManager {
       const avg = this.calculateAverage(this.cameraFpsHistory);
       this.elements.cameraFps.textContent =
         this.formatWithAverage(stats.cameraFps, avg, 1, 5);
+    }
+    if (stats.cameraWidth !== undefined && stats.cameraHeight !== undefined &&
+        this.elements.cameraResolution) {
+      this.elements.cameraResolution.textContent =
+        `${stats.cameraWidth}x${stats.cameraHeight}`;
     }
     if (stats.fps !== undefined && this.elements.fps) {
       this.addToHistory(this.fpsHistory, stats.fps);
@@ -158,6 +166,9 @@ export class StatsManager {
     const pad = (width) => '--'.padStart(width, '\u00A0');
     if (this.elements.cameraFps) {
       this.elements.cameraFps.textContent = `${pad(5)} / ${pad(5)}`;
+    }
+    if (this.elements.cameraResolution) {
+      this.elements.cameraResolution.textContent = '--';
     }
     if (this.elements.fps) {
       this.elements.fps.textContent = `${pad(5)} / ${pad(5)}`;
@@ -197,18 +208,25 @@ export class StatsManager {
   }
 
   /**
-   * Starts periodic WebRTC stats collection.
-   * @param {Object} webrtcClient - WebRTC client instance.
+   * Starts periodic camera stats collection (FPS and resolution).
+   * @param {Object} cameraManager - Camera manager instance.
    * @param {number} [intervalMs=1000] - Update interval in milliseconds.
    */
-  startWebRTCStatsCollection(webrtcClient, intervalMs = 1000) {
+  startCameraStatsCollection(cameraManager, intervalMs = 1000) {
     this.stopCollection();
-    this.intervalId = setInterval(async () => {
-      const stats = await webrtcClient.getOutboundVideoStats();
-      if (stats) {
-        this.update({
-          cameraFps: stats.framesPerSecond,
-        });
+    this.intervalId = setInterval(() => {
+      const fps = cameraManager.getCurrentFps();
+      const settings = cameraManager.getVideoSettings();
+      const statsUpdate = {};
+      if (fps > 0) {
+        statsUpdate.cameraFps = fps;
+      }
+      if (settings) {
+        statsUpdate.cameraWidth = settings.width;
+        statsUpdate.cameraHeight = settings.height;
+      }
+      if (Object.keys(statsUpdate).length > 0) {
+        this.update(statsUpdate);
       }
     }, intervalMs);
   }

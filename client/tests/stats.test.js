@@ -25,6 +25,7 @@ describe('StatsManager', () => {
   beforeEach(() => {
     mockElements = {
       cameraFps: {textContent: ''},
+      cameraResolution: {textContent: ''},
       fps: {textContent: ''},
       resolution: {textContent: ''},
       processingTime: {textContent: ''},
@@ -56,6 +57,11 @@ describe('StatsManager', () => {
       statsManager.update({cameraFps: 29.97});
       expect(mockElements.cameraFps.textContent).toContain('30.0');
       expect(mockElements.cameraFps.textContent).toContain('/');
+    });
+
+    it('should update camera resolution display', () => {
+      statsManager.update({cameraWidth: 1280, cameraHeight: 720});
+      expect(mockElements.cameraResolution.textContent).toBe('1280x720');
     });
 
     it('should update fps display with current and average', () => {
@@ -103,12 +109,13 @@ describe('StatsManager', () => {
 
   describe('reset', () => {
     it('should reset all displays to default', () => {
-      statsManager.update({cameraFps: 30, fps: 30, width: 1920, height: 1080,
-        processingTime: 10, latency: 50});
+      statsManager.update({cameraFps: 30, cameraWidth: 1280, cameraHeight: 720,
+        fps: 30, width: 1920, height: 1080, processingTime: 10, latency: 50});
       statsManager.reset();
 
       expect(mockElements.cameraFps.textContent).toContain('--');
       expect(mockElements.cameraFps.textContent).toContain('/');
+      expect(mockElements.cameraResolution.textContent).toBe('--');
       expect(mockElements.fps.textContent).toContain('--');
       expect(mockElements.fps.textContent).toContain('/');
       expect(mockElements.resolution.textContent).toBe('--');
@@ -170,23 +177,41 @@ describe('StatsManager', () => {
     });
   });
 
-  describe('startWebRTCStatsCollection', () => {
-    it('should start periodic WebRTC stats collection', async () => {
+  describe('startCameraStatsCollection', () => {
+    it('should start periodic camera stats collection', () => {
       vi.useFakeTimers();
 
-      const mockWebrtcClient = {
-        getOutboundVideoStats: vi.fn(() => Promise.resolve({
-          framesPerSecond: 30,
-        })),
+      const mockCameraManager = {
+        getCurrentFps: vi.fn(() => 30),
+        getVideoSettings: vi.fn(() => ({width: 1280, height: 720})),
       };
 
-      statsManager.startWebRTCStatsCollection(mockWebrtcClient, 100);
+      statsManager.startCameraStatsCollection(mockCameraManager, 100);
 
       expect(statsManager.intervalId).not.toBeNull();
 
       vi.advanceTimersByTime(100);
-      await Promise.resolve();
-      expect(mockWebrtcClient.getOutboundVideoStats).toHaveBeenCalled();
+      expect(mockCameraManager.getCurrentFps).toHaveBeenCalled();
+      expect(mockCameraManager.getVideoSettings).toHaveBeenCalled();
+      expect(mockElements.cameraFps.textContent).toContain('30.0');
+      expect(mockElements.cameraResolution.textContent).toBe('1280x720');
+
+      vi.useRealTimers();
+    });
+
+    it('should not update FPS when it is 0', () => {
+      vi.useFakeTimers();
+
+      const mockCameraManager = {
+        getCurrentFps: vi.fn(() => 0),
+        getVideoSettings: vi.fn(() => ({width: 640, height: 480})),
+      };
+
+      statsManager.startCameraStatsCollection(mockCameraManager, 100);
+      vi.advanceTimersByTime(100);
+
+      expect(mockElements.cameraFps.textContent).toBe('');
+      expect(mockElements.cameraResolution.textContent).toBe('640x480');
 
       vi.useRealTimers();
     });
@@ -194,16 +219,15 @@ describe('StatsManager', () => {
     it('should stop previous collection before starting new one', () => {
       vi.useFakeTimers();
 
-      const mockWebrtcClient = {
-        getOutboundVideoStats: vi.fn(() => Promise.resolve({
-          framesPerSecond: 30,
-        })),
+      const mockCameraManager = {
+        getCurrentFps: vi.fn(() => 30),
+        getVideoSettings: vi.fn(() => ({width: 1280, height: 720})),
       };
 
-      statsManager.startWebRTCStatsCollection(mockWebrtcClient, 100);
+      statsManager.startCameraStatsCollection(mockCameraManager, 100);
       const firstIntervalId = statsManager.intervalId;
 
-      statsManager.startWebRTCStatsCollection(mockWebrtcClient, 200);
+      statsManager.startCameraStatsCollection(mockCameraManager, 200);
       expect(statsManager.intervalId).not.toBe(firstIntervalId);
 
       vi.useRealTimers();

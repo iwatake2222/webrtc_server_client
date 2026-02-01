@@ -45,6 +45,7 @@ describe('CameraManager', () => {
       srcObject: null,
       pause: vi.fn(),
       play: vi.fn(),
+      addEventListener: vi.fn(),
     };
 
     global.navigator = {
@@ -59,6 +60,13 @@ describe('CameraManager', () => {
       expect(cameraManager.stream).toBeNull();
       expect(cameraManager.videoElement).toBeNull();
       expect(cameraManager.isPlaying).toBe(true);
+    });
+
+    it('should initialize frame counting properties', () => {
+      expect(cameraManager.frameCount).toBe(0);
+      expect(cameraManager.lastFpsCalcTime).toBe(0);
+      expect(cameraManager.currentFps).toBe(0);
+      expect(cameraManager.frameCallbackId).toBeNull();
     });
   });
 
@@ -170,6 +178,27 @@ describe('CameraManager', () => {
       await cameraManager.start(mockVideoElement);
 
       expect(cameraManager.getVideoSettings()).toBeNull();
+    });
+  });
+
+  describe('getCurrentFps', () => {
+    it('should return 0 initially', () => {
+      expect(cameraManager.getCurrentFps()).toBe(0);
+    });
+
+    it('should return current fps value', () => {
+      cameraManager.currentFps = 29.97;
+      expect(cameraManager.getCurrentFps()).toBe(29.97);
+    });
+  });
+
+  describe('frame counting', () => {
+    it('should reset fps on stop', async () => {
+      await cameraManager.start(mockVideoElement);
+      cameraManager.currentFps = 30;
+      cameraManager.stop();
+
+      expect(cameraManager.currentFps).toBe(0);
     });
   });
 });

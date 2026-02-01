@@ -33,6 +33,14 @@ export class CameraManager {
     this.videoElement = null;
     /** @type {boolean} */
     this.isPlaying = true;
+    /** @type {number} */
+    this.frameCount = 0;
+    /** @type {number} */
+    this.lastFpsCalcTime = 0;
+    /** @type {number} */
+    this.currentFps = 0;
+    /** @type {number|null} */
+    this.frameCallbackId = null;
   }
 
   /**
@@ -46,6 +54,9 @@ export class CameraManager {
     this.stream = await navigator.mediaDevices.getUserMedia(constraints);
     this.videoElement.srcObject = this.stream;
     this.isPlaying = true;
+    this.videoElement.addEventListener('playing', () => {
+      this.startFrameCounting();
+    }, {once: true});
     return this.stream;
   }
 
@@ -53,6 +64,7 @@ export class CameraManager {
    * Stops camera capture and releases resources.
    */
   stop() {
+    this.stopFrameCounting();
     if (this.stream) {
       this.stream.getTracks().forEach((track) => track.stop());
       this.stream = null;
@@ -109,5 +121,60 @@ export class CameraManager {
       height: settings.height || 0,
       frameRate: settings.frameRate || 0,
     };
+  }
+
+  /**
+   * Starts counting frames using requestVideoFrameCallback.
+   * @private
+   */
+  startFrameCounting() {
+    this.frameCount = 0;
+    this.lastFpsCalcTime = performance.now();
+    this.currentFps = 0;
+    this.countFrame();
+  }
+
+  /**
+   * Stops counting frames.
+   * @private
+   */
+  stopFrameCounting() {
+    this.frameCallbackId = null;
+    this.currentFps = 0;
+  }
+
+  /**
+   * Callback for counting video frames.
+   * @private
+   */
+  countFrame() {
+    if (!this.videoElement || !this.isPlaying) {
+      return;
+    }
+    this.frameCount++;
+    const now = performance.now();
+    const elapsed = now - this.lastFpsCalcTime;
+    if (elapsed >= 1000) {
+      this.currentFps = (this.frameCount * 1000) / elapsed;
+      this.frameCount = 0;
+      this.lastFpsCalcTime = now;
+    }
+    if ('requestVideoFrameCallback' in this.videoElement) {
+      this.frameCallbackId = this.videoElement.requestVideoFrameCallback(
+        () => this.countFrame());
+    }
+  }
+
+  /**
+   * Gets the current measured FPS.
+   * Falls back to device-reported frame rate if measurement not available.
+   * @return {number} The current FPS.
+   */
+  getCurrentFps() {
+    if (this.currentFps > 0) {
+      return this.currentFps;
+    }
+    const settings = this.getVideoSettings();
+    return settings ? settings.frameRate : 0;
   }
 }

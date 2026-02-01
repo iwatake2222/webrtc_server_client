@@ -101,6 +101,11 @@ describe('WebRTCClient', () => {
       expect(webrtcClient.onConnectionStateChange).toBeNull();
       expect(webrtcClient.onError).toBeNull();
     });
+
+    it('should initialize with null outbound stats tracking', () => {
+      expect(webrtcClient.lastFramesSent).toBeNull();
+      expect(webrtcClient.lastStatsTimestamp).toBeNull();
+    });
   });
 
   describe('disconnect', () => {
@@ -135,6 +140,14 @@ describe('WebRTCClient', () => {
       webrtcClient.disconnect();
       expect(webrtcClient.timestampIntervalId).toBeNull();
       vi.useRealTimers();
+    });
+
+    it('should reset outbound stats on disconnect', () => {
+      webrtcClient.lastFramesSent = 100;
+      webrtcClient.lastStatsTimestamp = 1000;
+      webrtcClient.disconnect();
+      expect(webrtcClient.lastFramesSent).toBeNull();
+      expect(webrtcClient.lastStatsTimestamp).toBeNull();
     });
   });
 
@@ -195,7 +208,37 @@ describe('WebRTCClient', () => {
       expect(stats).toEqual({framesPerSecond: 30});
     });
 
-    it('should return 0 for framesPerSecond when not available', async () => {
+    it('should calculate fps from framesSent when framesPerSecond unavailable',
+      async () => {
+        const mockStats1 = new Map([
+          ['outbound-rtp-video', {
+            type: 'outbound-rtp',
+            kind: 'video',
+            framesSent: 100,
+            timestamp: 1000,
+          }],
+        ]);
+        const mockStats2 = new Map([
+          ['outbound-rtp-video', {
+            type: 'outbound-rtp',
+            kind: 'video',
+            framesSent: 130,
+            timestamp: 2000,
+          }],
+        ]);
+        mockPeerConnection.getStats = vi.fn()
+          .mockResolvedValueOnce(mockStats1)
+          .mockResolvedValueOnce(mockStats2);
+        webrtcClient.peerConnection = mockPeerConnection;
+
+        const stats1 = await webrtcClient.getOutboundVideoStats();
+        expect(stats1).toBeNull();
+
+        const stats2 = await webrtcClient.getOutboundVideoStats();
+        expect(stats2).toEqual({framesPerSecond: 30});
+      });
+
+    it('should return null when no framesSent data available', async () => {
       const mockStats = new Map([
         ['outbound-rtp-video', {
           type: 'outbound-rtp',
@@ -206,7 +249,7 @@ describe('WebRTCClient', () => {
       webrtcClient.peerConnection = mockPeerConnection;
 
       const stats = await webrtcClient.getOutboundVideoStats();
-      expect(stats).toEqual({framesPerSecond: 0});
+      expect(stats).toBeNull();
     });
 
     it('should return null when no video outbound-rtp stats', async () => {
