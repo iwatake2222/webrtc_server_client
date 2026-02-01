@@ -24,6 +24,8 @@ describe('StatsManager', () => {
 
   beforeEach(() => {
     mockElements = {
+      cameraFps: {textContent: ''},
+      cameraResolution: {textContent: ''},
       fps: {textContent: ''},
       resolution: {textContent: ''},
       processingTime: {textContent: ''},
@@ -43,6 +45,7 @@ describe('StatsManager', () => {
     });
 
     it('should initialize with empty history arrays', () => {
+      expect(statsManager.cameraFpsHistory).toEqual([]);
       expect(statsManager.fpsHistory).toEqual([]);
       expect(statsManager.processingTimeHistory).toEqual([]);
       expect(statsManager.latencyHistory).toEqual([]);
@@ -50,6 +53,17 @@ describe('StatsManager', () => {
   });
 
   describe('update', () => {
+    it('should update camera fps display with current and average', () => {
+      statsManager.update({cameraFps: 29.97});
+      expect(mockElements.cameraFps.textContent).toContain('30.0');
+      expect(mockElements.cameraFps.textContent).toContain('/');
+    });
+
+    it('should update camera resolution display', () => {
+      statsManager.update({cameraWidth: 1280, cameraHeight: 720});
+      expect(mockElements.cameraResolution.textContent).toBe('1280x720');
+    });
+
     it('should update fps display with current and average', () => {
       statsManager.update({fps: 29.97});
       expect(mockElements.fps.textContent).toContain('30.0');
@@ -95,10 +109,13 @@ describe('StatsManager', () => {
 
   describe('reset', () => {
     it('should reset all displays to default', () => {
-      statsManager.update({fps: 30, width: 1920, height: 1080,
-        processingTime: 10, latency: 50});
+      statsManager.update({cameraFps: 30, cameraWidth: 1280, cameraHeight: 720,
+        fps: 30, width: 1920, height: 1080, processingTime: 10, latency: 50});
       statsManager.reset();
 
+      expect(mockElements.cameraFps.textContent).toContain('--');
+      expect(mockElements.cameraFps.textContent).toContain('/');
+      expect(mockElements.cameraResolution.textContent).toBe('--');
       expect(mockElements.fps.textContent).toContain('--');
       expect(mockElements.fps.textContent).toContain('/');
       expect(mockElements.resolution.textContent).toBe('--');
@@ -107,9 +124,11 @@ describe('StatsManager', () => {
     });
 
     it('should clear history arrays', () => {
-      statsManager.update({fps: 30, processingTime: 10, latency: 50});
+      statsManager.update({cameraFps: 30, fps: 30, processingTime: 10,
+        latency: 50});
       statsManager.reset();
 
+      expect(statsManager.cameraFpsHistory).toEqual([]);
       expect(statsManager.fpsHistory).toEqual([]);
       expect(statsManager.processingTimeHistory).toEqual([]);
       expect(statsManager.latencyHistory).toEqual([]);
@@ -152,6 +171,63 @@ describe('StatsManager', () => {
       const firstIntervalId = statsManager.intervalId;
 
       statsManager.startLocalStatsCollection(mockCameraManager, 200);
+      expect(statsManager.intervalId).not.toBe(firstIntervalId);
+
+      vi.useRealTimers();
+    });
+  });
+
+  describe('startCameraStatsCollection', () => {
+    it('should start periodic camera stats collection', () => {
+      vi.useFakeTimers();
+
+      const mockCameraManager = {
+        getCurrentFps: vi.fn(() => 30),
+        getVideoSettings: vi.fn(() => ({width: 1280, height: 720})),
+      };
+
+      statsManager.startCameraStatsCollection(mockCameraManager, 100);
+
+      expect(statsManager.intervalId).not.toBeNull();
+
+      vi.advanceTimersByTime(100);
+      expect(mockCameraManager.getCurrentFps).toHaveBeenCalled();
+      expect(mockCameraManager.getVideoSettings).toHaveBeenCalled();
+      expect(mockElements.cameraFps.textContent).toContain('30.0');
+      expect(mockElements.cameraResolution.textContent).toBe('1280x720');
+
+      vi.useRealTimers();
+    });
+
+    it('should not update FPS when it is 0', () => {
+      vi.useFakeTimers();
+
+      const mockCameraManager = {
+        getCurrentFps: vi.fn(() => 0),
+        getVideoSettings: vi.fn(() => ({width: 640, height: 480})),
+      };
+
+      statsManager.startCameraStatsCollection(mockCameraManager, 100);
+      vi.advanceTimersByTime(100);
+
+      expect(mockElements.cameraFps.textContent).toBe('');
+      expect(mockElements.cameraResolution.textContent).toBe('640x480');
+
+      vi.useRealTimers();
+    });
+
+    it('should stop previous collection before starting new one', () => {
+      vi.useFakeTimers();
+
+      const mockCameraManager = {
+        getCurrentFps: vi.fn(() => 30),
+        getVideoSettings: vi.fn(() => ({width: 1280, height: 720})),
+      };
+
+      statsManager.startCameraStatsCollection(mockCameraManager, 100);
+      const firstIntervalId = statsManager.intervalId;
+
+      statsManager.startCameraStatsCollection(mockCameraManager, 200);
       expect(statsManager.intervalId).not.toBe(firstIntervalId);
 
       vi.useRealTimers();

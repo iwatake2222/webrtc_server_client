@@ -59,6 +59,8 @@ async function init() {
   serverUrlInput.value = getDefaultServerUrl();
 
   statsManager = new StatsManager({
+    cameraFps: document.getElementById('statsCameraFps'),
+    cameraResolution: document.getElementById('statsCameraResolution'),
     fps: document.getElementById('statsFps'),
     resolution: document.getElementById('statsResolution'),
     processingTime: document.getElementById('statsProcessingTime'),
@@ -104,6 +106,7 @@ async function init() {
     try {
       const constraints = buildConstraints(resolutionSelect.value);
       await cameraManager.start(localVideo, constraints);
+      statsManager.startCameraStatsCollection(cameraManager);
 
       const stream = cameraManager.getStream();
       if (!stream) {

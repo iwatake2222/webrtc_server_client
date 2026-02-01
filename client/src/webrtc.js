@@ -43,6 +43,10 @@ export class WebRTCClient {
     this.onError = null;
     /** @type {number|null} */
     this.timestampIntervalId = null;
+    /** @type {number|null} */
+    this.lastFramesSent = null;
+    /** @type {number|null} */
+    this.lastStatsTimestamp = null;
   }
 
   /**
@@ -240,6 +244,7 @@ export class WebRTCClient {
    */
   disconnect() {
     this.stopTimestampSending();
+    this.resetOutboundStats();
     if (this.dataChannel) {
       this.dataChannel.close();
       this.dataChannel = null;
@@ -260,5 +265,67 @@ export class WebRTCClient {
    */
   getConnectionState() {
     return this.peerConnection ? this.peerConnection.connectionState : null;
+  }
+
+  /**
+   * Gets outbound video statistics including camera FPS.
+   * @return {Promise<{framesPerSecond: number}|null>} Outbound stats or null.
+   */
+  async getOutboundVideoStats() {
+    if (!this.peerConnection) return null;
+
+    try {
+      const stats = await this.peerConnection.getStats();
+      for (const report of stats.values()) {
+        if (report.type === 'outbound-rtp' && report.kind === 'video') {
+          if (report.framesPerSecond !== undefined) {
+            return {framesPerSecond: report.framesPerSecond};
+          }
+          const fps = this.calculateFpsFromFramesSent(
+            report.framesSent, report.timestamp);
+          if (fps !== null) {
+            return {framesPerSecond: fps};
+          }
+          return null;
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to get outbound stats:', error);
+    }
+    return null;
+  }
+
+  /**
+   * Calculates FPS from framesSent difference.
+   * @param {number} framesSent - Current frames sent count.
+   * @param {number} timestamp - Current timestamp in milliseconds.
+   * @return {number|null} Calculated FPS or null if not enough data.
+   * @private
+   */
+  calculateFpsFromFramesSent(framesSent, timestamp) {
+    if (framesSent === undefined || timestamp === undefined) {
+      return null;
+    }
+    if (this.lastFramesSent === null || this.lastStatsTimestamp === null) {
+      this.lastFramesSent = framesSent;
+      this.lastStatsTimestamp = timestamp;
+      return null;
+    }
+    const frameDiff = framesSent - this.lastFramesSent;
+    const timeDiff = (timestamp - this.lastStatsTimestamp) / 1000;
+    this.lastFramesSent = framesSent;
+    this.lastStatsTimestamp = timestamp;
+    if (timeDiff <= 0) {
+      return null;
+    }
+    return frameDiff / timeDiff;
+  }
+
+  /**
+   * Resets outbound stats tracking state.
+   */
+  resetOutboundStats() {
+    this.lastFramesSent = null;
+    this.lastStatsTimestamp = null;
   }
 }
