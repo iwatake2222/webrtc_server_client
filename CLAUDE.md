@@ -37,11 +37,19 @@ client/   # HTML/JS frontend (src/, tests/)
 2. コード実装
 3. `test` → テスト実行
 4. `pre-commit` → ブランチ状態確認
-5. `lint` → スタイルチェック
+5. `lint` → スタイルチェック（flake8 + pylint + ESLint全て）
 6. `typecheck` → 型チェック
 7. コミット
 8. `review` → 変更レビュー
 9. `pr` → PR作成
+
+## Setup
+```bash
+# pre-commit hookのインストール（初回のみ）
+pip install pre-commit
+pre-commit install
+```
+pre-commitにより、コミット時に自動でlint/test/typecheckが実行される。
 
 ## License
 - Apache 2.0 (Copyright 2026 iwatake2222)
