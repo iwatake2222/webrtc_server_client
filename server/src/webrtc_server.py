@@ -18,7 +18,7 @@ import asyncio
 import json
 import logging
 from pathlib import Path
-from typing import Optional, cast
+from typing import Any, Optional, cast
 
 from aiohttp import web
 from aiortc import (
@@ -59,15 +59,21 @@ class VideoTransformTrack(MediaStreamTrack):
     self._track = track
     self._processor = processor
     self._data_channel = data_channel
-    self._latest_frame: Optional[VideoFrame] = None
-    self._latest_client_ts: Optional[int] = None
-    self._latest_client_frame_id: Optional[int] = None
-    self._current_client_ts: Optional[int] = None
-    self._current_client_frame_id: Optional[int] = None
-    self._frame_lock = asyncio.Lock()
-    self._frame_ready = asyncio.Event()
-    self._receiver_task: Optional[asyncio.Task[None]] = None
-    self._running = True
+    self._frame_state: dict[str, Any] = {
+        "latest": None,
+        "lock": asyncio.Lock(),
+        "ready": asyncio.Event(),
+    }
+    self._client_data: dict[str, int | None] = {
+        "current_ts": None,
+        "current_frame_id": None,
+        "latest_ts": None,
+        "latest_frame_id": None,
+    }
+    self._receiver: dict[str, Any] = {
+        "task": None,
+        "running": True,
+    }
 
   def set_data_channel(self, data_channel: RTCDataChannel) -> None:
     """Set the data channel for sending stats.
@@ -88,26 +94,27 @@ class VideoTransformTrack(MediaStreamTrack):
       try:
         data = json.loads(message)
         if data.get("type") == "timestamp":
-          self._current_client_ts = data.get("ts")
-          self._current_client_frame_id = data.get("client_frame_id")
+          self._client_data["current_ts"] = data.get("ts")
+          self._client_data["current_frame_id"] = data.get("client_frame_id")
       except (json.JSONDecodeError, TypeError) as e:
         logger.debug("Failed to parse data channel message: %s", e)
 
   async def _start_receiver(self) -> None:
     """Start the background frame receiver task."""
-    if self._receiver_task is None:
-      self._receiver_task = asyncio.create_task(self._receive_frames())
+    if self._receiver["task"] is None:
+      self._receiver["task"] = asyncio.create_task(self._receive_frames())
 
   async def _receive_frames(self) -> None:
     """Continuously receive frames, keeping only the latest one."""
-    while self._running:
+    while self._receiver["running"]:
       try:
         frame = cast(VideoFrame, await self._track.recv())
-        async with self._frame_lock:
-          self._latest_frame = frame
-          self._latest_client_ts = self._current_client_ts
-          self._latest_client_frame_id = self._current_client_frame_id
-          self._frame_ready.set()
+        async with self._frame_state["lock"]:
+          self._frame_state["latest"] = frame
+          self._client_data["latest_ts"] = self._client_data["current_ts"]
+          self._client_data["latest_frame_id"] = \
+              self._client_data["current_frame_id"]
+          self._frame_state["ready"].set()
       except Exception as e:
         logger.debug("Frame receiver stopped: %s", e)
         break
@@ -123,16 +130,16 @@ class VideoTransformTrack(MediaStreamTrack):
     """
     await self._start_receiver()
 
-    await self._frame_ready.wait()
+    await self._frame_state["ready"].wait()
 
-    async with self._frame_lock:
-      frame = self._latest_frame
-      client_ts = self._latest_client_ts
-      client_frame_id = self._latest_client_frame_id
-      self._latest_frame = None
-      self._latest_client_ts = None
-      self._latest_client_frame_id = None
-      self._frame_ready.clear()
+    async with self._frame_state["lock"]:
+      frame = self._frame_state["latest"]
+      client_ts = self._client_data["latest_ts"]
+      client_frame_id = self._client_data["latest_frame_id"]
+      self._frame_state["latest"] = None
+      self._client_data["latest_ts"] = None
+      self._client_data["latest_frame_id"] = None
+      self._frame_state["ready"].clear()
 
     if frame is None:
       raise Exception("No frame available")
@@ -143,7 +150,7 @@ class VideoTransformTrack(MediaStreamTrack):
 
     loop = asyncio.get_event_loop()
     processed_img, stats = await loop.run_in_executor(
-        None, self._processor.process, img  # type: ignore[arg-type]
+        None, self._processor.process, img
     )
 
     if self._data_channel is not None:
@@ -160,9 +167,9 @@ class VideoTransformTrack(MediaStreamTrack):
 
   def stop(self) -> None:
     """Stop the frame receiver task."""
-    self._running = False
-    if self._receiver_task is not None:
-      self._receiver_task.cancel()
+    self._receiver["running"] = False
+    if self._receiver["task"] is not None:
+      self._receiver["task"].cancel()
 
 
 class WebRTCServer:

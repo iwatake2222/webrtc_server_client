@@ -36,14 +36,15 @@ class ImageProcessor:
       canny_threshold1: First threshold for Canny edge detection.
       canny_threshold2: Second threshold for Canny edge detection.
     """
-    self._canny_threshold1 = canny_threshold1
-    self._canny_threshold2 = canny_threshold2
+    self._canny_thresholds = (canny_threshold1, canny_threshold2)
     self._frame_count = 0
     self._total_frame_count = 0
     self._fps_start_time = time.time()
     self._current_fps = 0.0
-    self._client_timestamp: int | None = None
-    self._client_frame_id: int | None = None
+    self._client_data: dict[str, int | None] = {
+        "timestamp": None,
+        "frame_id": None,
+    }
 
   def set_client_timestamp(self, timestamp: int | None) -> None:
     """Set the client timestamp for latency calculation.
@@ -51,7 +52,7 @@ class ImageProcessor:
     Args:
       timestamp: Client timestamp in milliseconds, or None to clear.
     """
-    self._client_timestamp = timestamp
+    self._client_data["timestamp"] = timestamp
 
   def set_client_frame_id(self, frame_id: int | None) -> None:
     """Set the client frame ID for tracking.
@@ -59,7 +60,7 @@ class ImageProcessor:
     Args:
       frame_id: Client frame ID, or None to clear.
     """
-    self._client_frame_id = frame_id
+    self._client_data["frame_id"] = frame_id
 
   def process(
       self,
@@ -79,7 +80,8 @@ class ImageProcessor:
 
     height, width = frame.shape[:2]
 
-    edges = cv2.Canny(frame, self._canny_threshold1, self._canny_threshold2)
+    threshold1, threshold2 = self._canny_thresholds
+    edges = cv2.Canny(frame, threshold1, threshold2)
     processed = cast(
         NDArray[np.uint8],
         cv2.cvtColor(edges, cv2.COLOR_GRAY2BGR)
@@ -103,11 +105,11 @@ class ImageProcessor:
         "processing_time_ms": round(processing_time_ms, 2),
     }
 
-    if self._client_timestamp is not None:
-      stats["client_ts"] = self._client_timestamp
+    if self._client_data["timestamp"] is not None:
+      stats["client_ts"] = self._client_data["timestamp"]
 
-    if self._client_frame_id is not None:
-      stats["client_frame_id"] = self._client_frame_id
+    if self._client_data["frame_id"] is not None:
+      stats["client_frame_id"] = self._client_data["frame_id"]
 
     return processed, stats
 
@@ -121,5 +123,5 @@ class ImageProcessor:
     """Reset all state including frame count and client timestamp."""
     self.reset_fps()
     self._total_frame_count = 0
-    self._client_timestamp = None
-    self._client_frame_id = None
+    self._client_data["timestamp"] = None
+    self._client_data["frame_id"] = None
