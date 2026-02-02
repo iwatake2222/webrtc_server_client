@@ -24,6 +24,19 @@
  */
 export class CameraManager {
   /**
+   * Gets a list of available camera devices.
+   * @return {Promise<Array<{deviceId: string, label: string}>>}
+   */
+  static async getCameraDevices() {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    return devices
+      .filter((device) => device.kind === 'videoinput')
+      .map((device, index) => ({
+        deviceId: device.deviceId,
+        label: device.label || `Camera ${index + 1}`,
+      }));
+  }
+  /**
    * Creates a new CameraManager instance.
    */
   constructor() {

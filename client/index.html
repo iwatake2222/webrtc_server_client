@@ -45,13 +45,19 @@ limitations under the License.
             <input type="text" class="form-control" id="serverUrl"
                    placeholder="ws://localhost:8080/ws">
           </div>
-          <div class="col-md-3">
+          <div class="col-md-2">
             <label for="resolution" class="form-label">Resolution</label>
             <select class="form-select" id="resolution">
               <option value="1920x1080">1920x1080 (Full HD)</option>
               <option value="1280x720">1280x720 (HD)</option>
               <option value="640x480" selected>640x480 (VGA)</option>
               <option value="320x240">320x240 (QVGA)</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label for="cameraSelect" class="form-label">Camera</label>
+            <select class="form-select" id="cameraSelect">
+              <option value="">Loading...</option>
             </select>
           </div>
           <div class="col-md-3 d-flex gap-2 align-items-end">
