@@ -116,9 +116,12 @@ python -m src.main --host 0.0.0.0 --port 8080 --cert cert.pem --key key.pem
 cd aws
 
 Region=ap-northeast-1
-AvailabilityZone=ap-northeast-1a
+AvailabilityZone=ap-northeast-1d
+ImageId=ami-0e7d0c8815f409923  # Deep Learning OSS Nvidia Driver AMI GPU PyTorch 2.9 (Ubuntu 24.04)
+InstanceType=g5.4xlarge
+RootVolumeSize=256
 
-SystemName=webrtc-ec2-public-alb
+SystemName=webrtc-alpamayo
 TemplateFileName=./ec2_public_alb.yaml
 
 aws cloudformation deploy \
@@ -128,7 +131,10 @@ aws cloudformation deploy \
 --capabilities CAPABILITY_NAMED_IAM \
 --parameter-overrides \
 SystemName="${SystemName}" \
-AvailabilityZone="${AvailabilityZone}"
+AvailabilityZone="${AvailabilityZone}" \
+ImageId="${ImageId}" \
+InstanceType="${InstanceType}" \
+RootVolumeSize="${RootVolumeSize}"
 ```
 
 ### SSH Configuration
@@ -148,11 +154,13 @@ Host i-* mi-*
 Host webrtc-ec2-server
     HostName i-00000000000000000
     User ubuntu
+    # User ec2-user
     ProxyCommand sh -c "aws ec2-instance-connect send-ssh-public-key --instance-id %h --instance-os-user %r --ssh-public-key 'file://~/.ssh/id_rsa.pub' && aws ssm start-session --target %h --document-name AWS-StartSSHSession --parameters 'portNumber=%p'"
 ```
 
 ```bash
 ssh ubuntu@i-00000000000000000
+ssh ec2-user@i-00000000000000000
 # or
 ssh webrtc-ec2-server
 ```
