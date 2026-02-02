@@ -15,14 +15,15 @@ Real-time video processing application using Python + HTML/JavaScript WebRTC
 
 - Python 3.12+
 - Node.js 20+
+- uv (Python package manager)
 
 ### Server
 
 ```bash
 cd server
-python -m venv .venv
+uv venv
+uv sync
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
 ```
 
 ### Client

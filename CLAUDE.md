@@ -11,8 +11,10 @@ Real-time video processing application using WebRTC. Client captures camera vide
 ### Server (Python)
 ```bash
 cd server
-source .venv/bin/activate
-python -m src.main --host 0.0.0.0 --port 8080  # Run server
+uv venv                                         # Create venv
+uv sync                                         # Install dependencies
+source .venv/bin/activate                       # Activate venv
+python -m src.main --host 0.0.0.0 --port 8080   # Run server
 pytest -v                                       # Run tests
 pytest tests/test_image_processor.py::test_xxx  # Single test
 flake8 src/ tests/                              # Lint
