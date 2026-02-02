@@ -1,17 +1,17 @@
 # WebRTC Server-Client
 
-Python + HTML/JavaScript を使用した WebRTC サーバー・クライアントアプリケーション
+Real-time video processing application using Python + HTML/JavaScript WebRTC
 
-## 機能
+## Features
 
-- クライアントからカメラ映像をWebRTC経由でサーバーに送信
-- サーバーでOpenCVによるエッジ検出処理（Canny）
-- 処理済み映像をクライアントにリアルタイム返却
-- DataChannel経由で処理統計（画像サイズ、FPS、処理時間）を送信
+- Send camera video from client to server via WebRTC
+- Server applies Canny edge detection using OpenCV
+- Return processed video to client in real-time
+- Send processing stats (image size, FPS, processing time) via DataChannel
 
-## 環境セットアップ
+## Setup
 
-### 必要条件
+### Requirements
 
 - Python 3.12+
 - Node.js 20+
@@ -32,11 +32,11 @@ cd client
 npm install
 ```
 
-## ビルド
+## Build
 
-現在ビルドステップは不要です。
+No build step required.
 
-## テスト
+## Test
 
 ### Server
 
@@ -57,7 +57,7 @@ npm test
 npm run lint
 ```
 
-## 実行
+## Run
 
 ```bash
 cd server
@@ -65,27 +65,27 @@ source .venv/bin/activate
 python -m src.main --host 0.0.0.0 --port 8080
 ```
 
-ブラウザで `http://localhost:8080` を開く
+Open `http://localhost:8080` in browser
 
-### コマンドラインオプション
+### Command Line Options
 
-| オプション | デフォルト | 説明 |
-|-----------|-----------|------|
-| `--host` | `0.0.0.0` | バインドするホストアドレス |
-| `--port` | `8080` | リッスンするポート |
-| `--log-level` | `INFO` | ログレベル (DEBUG/INFO/WARNING/ERROR)
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--host` | `0.0.0.0` | Host address to bind |
+| `--port` | `8080` | Port to listen on |
+| `--log-level` | `INFO` | Log level (DEBUG/INFO/WARNING/ERROR) |
 
-### エンドポイント
+### Endpoints
 
-| URL | 説明 |
-|-----|------|
-| `http://localhost:8080/` | クライアントUI |
-| `ws://localhost:8080/ws` | WebSocketシグナリング |
-| `http://localhost:8080/health` | ヘルスチェック |
+| URL | Description |
+|-----|-------------|
+| `http://localhost:8080/` | Client UI |
+| `ws://localhost:8080/ws` | WebSocket signaling |
+| `http://localhost:8080/health` | Health check |
 
 ## Deploy for AWS
 
-### EC2サーバーの構築
+### Build EC2 Server
 
 ```bash
 cd aws
@@ -106,7 +106,7 @@ SystemName="${SystemName}" \
 AvailabilityZone="${AvailabilityZone}"
 ```
 
-### SSH設定
+### SSH Configuration
 
 - Configure `~/.ssh/config`
   - (Optional) For Windows: Replace the followings
@@ -132,6 +132,6 @@ ssh ubuntu@i-00000000000000000
 ssh webrtc-ec2-server
 ```
 
-## ライセンス
+## License
 
 Apache 2.0
