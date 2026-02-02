@@ -116,9 +116,9 @@ python -m src.main --host 0.0.0.0 --port 8080 --cert cert.pem --key key.pem
 cd aws
 
 Region=ap-northeast-1
-AvailabilityZone=ap-northeast-1d
-ImageId=ami-0e7d0c8815f409923  # Deep Learning OSS Nvidia Driver AMI GPU PyTorch 2.9 (Ubuntu 24.04)
-InstanceType=g5.4xlarge
+AvailabilityZone=ap-northeast-1a
+ImageId=ami-0f65fc8c24ec8d2a1  # Ubuntu Server 24.04
+InstanceType=t3.medium
 RootVolumeSize=256
 
 SystemName=webrtc-alpamayo
