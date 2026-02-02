@@ -222,7 +222,9 @@ class WebRTCServer:
     )
     await site.start()
     protocol = "https" if self._ssl_context else "http"
-    logger.info("WebRTC server started on %s://%s:%d", protocol, self._host, self._port)
+    logger.info(
+        "WebRTC server started on %s://%s:%d", protocol, self._host, self._port
+    )
 
   async def stop(self) -> None:
     """Stop the WebRTC server."""
