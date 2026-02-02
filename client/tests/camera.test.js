@@ -51,6 +51,7 @@ describe('CameraManager', () => {
     global.navigator = {
       mediaDevices: {
         getUserMedia: vi.fn(() => Promise.resolve(mockStream)),
+        enumerateDevices: vi.fn(() => Promise.resolve([])),
       },
     };
   });
@@ -219,6 +220,42 @@ describe('CameraManager', () => {
     it('should return current total frame count', () => {
       cameraManager.totalFrameCount = 42;
       expect(cameraManager.getTotalFrameCount()).toBe(42);
+    });
+  });
+
+  describe('getCameraDevices', () => {
+    it('should return empty array when no cameras', async () => {
+      navigator.mediaDevices.enumerateDevices = vi.fn(() =>
+        Promise.resolve([]),
+      );
+      const devices = await CameraManager.getCameraDevices();
+      expect(devices).toEqual([]);
+    });
+
+    it('should return video input devices only', async () => {
+      navigator.mediaDevices.enumerateDevices = vi.fn(() =>
+        Promise.resolve([
+          {kind: 'videoinput', deviceId: 'cam1', label: 'Front Camera'},
+          {kind: 'audioinput', deviceId: 'mic1', label: 'Microphone'},
+          {kind: 'videoinput', deviceId: 'cam2', label: 'Back Camera'},
+        ]),
+      );
+      const devices = await CameraManager.getCameraDevices();
+      expect(devices).toHaveLength(2);
+      expect(devices[0]).toEqual({deviceId: 'cam1', label: 'Front Camera'});
+      expect(devices[1]).toEqual({deviceId: 'cam2', label: 'Back Camera'});
+    });
+
+    it('should use fallback label when label is empty', async () => {
+      navigator.mediaDevices.enumerateDevices = vi.fn(() =>
+        Promise.resolve([
+          {kind: 'videoinput', deviceId: 'cam1', label: ''},
+          {kind: 'videoinput', deviceId: 'cam2', label: ''},
+        ]),
+      );
+      const devices = await CameraManager.getCameraDevices();
+      expect(devices[0].label).toBe('Camera 1');
+      expect(devices[1].label).toBe('Camera 2');
     });
   });
 });

@@ -48,6 +48,9 @@ async function init() {
   const resolutionSelect = /** @type {HTMLSelectElement} */ (
     document.getElementById('resolution')
   );
+  const cameraSelect = /** @type {HTMLSelectElement} */ (
+    document.getElementById('cameraSelect')
+  );
   const connectBtn = /** @type {HTMLButtonElement} */ (
     document.getElementById('connectBtn')
   );
@@ -57,6 +60,8 @@ async function init() {
   const serverResponse = document.getElementById('serverResponse');
 
   serverUrlInput.value = getDefaultServerUrl();
+
+  await populateCameraList(cameraSelect);
 
   statsManager = new StatsManager({
     cameraFps: document.getElementById('statsCameraFps'),
@@ -106,7 +111,10 @@ async function init() {
 
   connectBtn.addEventListener('click', async () => {
     try {
-      const constraints = buildConstraints(resolutionSelect.value);
+      const constraints = buildConstraints(
+        resolutionSelect.value,
+        cameraSelect.value,
+      );
       await cameraManager.start(localVideo, constraints);
       statsManager.startCameraStatsCollection(cameraManager);
 
@@ -121,6 +129,7 @@ async function init() {
       connectBtn.disabled = true;
       disconnectBtn.disabled = false;
       resolutionSelect.disabled = true;
+      cameraSelect.disabled = true;
       serverUrlInput.disabled = true;
 
       if (serverResponse) {
@@ -152,6 +161,7 @@ async function init() {
     connectBtn.disabled = false;
     disconnectBtn.disabled = true;
     resolutionSelect.disabled = false;
+    cameraSelect.disabled = false;
     serverUrlInput.disabled = false;
     if (serverResponse) {
       serverResponse.textContent = 'Disconnected.';
@@ -171,19 +181,52 @@ function getDefaultServerUrl() {
 }
 
 /**
- * Builds media constraints from resolution string.
+ * Builds media constraints from resolution string and optional device ID.
  * @param {string} resolution - Resolution string (e.g., "1280x720").
+ * @param {string} [deviceId] - Optional camera device ID.
  * @return {MediaStreamConstraints} The media constraints object.
  */
-function buildConstraints(resolution) {
+function buildConstraints(resolution, deviceId) {
   const [width, height] = resolution.split('x').map(Number);
+  /** @type {MediaTrackConstraints} */
+  const videoConstraints = {
+    width: {ideal: width},
+    height: {ideal: height},
+  };
+  if (deviceId) {
+    videoConstraints.deviceId = {exact: deviceId};
+  }
   return {
-    video: {
-      width: {ideal: width},
-      height: {ideal: height},
-    },
+    video: videoConstraints,
     audio: false,
   };
+}
+
+/**
+ * Populates the camera selection dropdown.
+ * @param {HTMLSelectElement} selectElement - The select element to populate.
+ */
+async function populateCameraList(selectElement) {
+  try {
+    const cameras = await CameraManager.getCameraDevices();
+    selectElement.innerHTML = '';
+    if (cameras.length === 0) {
+      const option = document.createElement('option');
+      option.value = '';
+      option.textContent = 'No camera found';
+      selectElement.appendChild(option);
+      return;
+    }
+    cameras.forEach((camera) => {
+      const option = document.createElement('option');
+      option.value = camera.deviceId;
+      option.textContent = camera.label;
+      selectElement.appendChild(option);
+    });
+  } catch (error) {
+    console.error('Failed to get camera devices:', error);
+    selectElement.innerHTML = '<option value="">Default</option>';
+  }
 }
 
 /**
