@@ -13,12 +13,13 @@ jobs:
         working-directory: server
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: astral-sh/setup-uv@v5
         with:
-          python-version: '3.12'
-          cache: 'pip'
-      - run: pip install -r requirements.txt
-      - run: flake8 src/ tests/
-      - run: pylint src/
-      - run: mypy src/
-      - run: pytest -v
+          enable-cache: true
+      - run: uv venv && uv sync
+      - run: |
+          source .venv/bin/activate
+          flake8 src/ tests/
+          pylint src/
+          mypy src/
+          pytest -v
