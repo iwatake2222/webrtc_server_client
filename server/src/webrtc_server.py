@@ -18,6 +18,7 @@ import asyncio
 import json
 import logging
 import ssl
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional, cast
 
@@ -173,6 +174,16 @@ class VideoTransformTrack(MediaStreamTrack):
       self._receiver["task"].cancel()
 
 
+@dataclass
+class ServerConfig:
+  """Configuration for the WebRTC server."""
+
+  host: str = "0.0.0.0"
+  port: int = 8080
+  client_dir: Path = DEFAULT_CLIENT_DIR
+  ssl_context: Optional[ssl.SSLContext] = None
+
+
 class WebRTCServer:
   """WebRTC server for receiving and processing video streams."""
 
@@ -191,10 +202,12 @@ class WebRTCServer:
       client_dir: Path to client files directory for static file serving.
       ssl_context: Optional SSL context for HTTPS support.
     """
-    self._host = host
-    self._port = port
-    self._client_dir = client_dir or DEFAULT_CLIENT_DIR
-    self._ssl_context = ssl_context
+    self._config = ServerConfig(
+        host=host,
+        port=port,
+        client_dir=client_dir or DEFAULT_CLIENT_DIR,
+        ssl_context=ssl_context
+    )
     self._app: Optional[web.Application] = None
     self._runner: Optional[web.AppRunner] = None
     self._pcs: set[RTCPeerConnection] = set()
@@ -206,24 +219,28 @@ class WebRTCServer:
     self._app.router.add_get("/ws", self._handle_websocket)
     self._app.router.add_get("/health", self._handle_health)
 
-    if self._client_dir.exists():
+    if self._config.client_dir.exists():
       self._app.router.add_get("/", self._handle_index)
       self._app.router.add_static(
-          "/src", self._client_dir / "src", name="src"
+          "/src", self._config.client_dir / "src", name="src"
       )
-      logger.info("Serving client files from %s", self._client_dir)
+      logger.info("Serving client files from %s", self._config.client_dir)
 
     self._app.on_shutdown.append(self._on_shutdown)
 
     self._runner = web.AppRunner(self._app)
     await self._runner.setup()
     site = web.TCPSite(
-        self._runner, self._host, self._port, ssl_context=self._ssl_context
+        self._runner,
+        self._config.host,
+        self._config.port,
+        ssl_context=self._config.ssl_context
     )
     await site.start()
-    protocol = "https" if self._ssl_context else "http"
+    protocol = "https" if self._config.ssl_context else "http"
     logger.info(
-        "WebRTC server started on %s://%s:%d", protocol, self._host, self._port
+        "WebRTC server started on %s://%s:%d",
+        protocol, self._config.host, self._config.port
     )
 
   async def stop(self) -> None:
@@ -262,7 +279,7 @@ class WebRTCServer:
     Returns:
       The index.html file response.
     """
-    return web.FileResponse(self._client_dir / "index.html")
+    return web.FileResponse(self._config.client_dir / "index.html")
 
   async def _handle_websocket(
       self,
