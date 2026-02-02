@@ -36,3 +36,6 @@ Thumbs.db
 # Project specific
 *.log
 *.local
+
+# SSL certificates
+*.pem
