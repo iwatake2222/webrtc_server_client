@@ -1,56 +1,85 @@
-# WebRTC Server-Client Project
+# CLAUDE.md
 
-Python + HTML/JavaScript WebRTC サーバー・クライアント
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Tech Stack
-- Backend: Python (FastAPI/Flask)
-- Frontend: HTML + Vanilla JS
-- Protocol: WebRTC, WebSocket
+## Project Overview
 
-## Project Structure
+Real-time video processing application using WebRTC. Client captures camera video, sends to Python server via WebRTC, server applies Canny edge detection (OpenCV), returns processed video to client with stats via DataChannel.
+
+## Commands
+
+### Server (Python)
+```bash
+cd server
+source .venv/bin/activate
+python -m src.main --host 0.0.0.0 --port 8080  # Run server
+pytest -v                                       # Run tests
+pytest tests/test_image_processor.py::test_xxx  # Single test
+flake8 src/ tests/                              # Lint
+pylint src/                                     # Pylint
+mypy src/                                       # Type check
 ```
-server/   # Python backend (src/, tests/)
-client/   # HTML/JS frontend (src/, tests/)
+
+### Client (JavaScript)
+```bash
+cd client
+npm test                  # Run tests (vitest)
+npm run lint              # ESLint
 ```
+
+## Architecture
+
+```
+Browser (client/)                    Python Server (server/)
+┌─────────────────┐                 ┌─────────────────────┐
+│ CameraManager   │──video track──→│ VideoTransformTrack │
+│ (camera.js)     │                 │ (webrtc_server.py)  │
+│                 │                 │         │           │
+│ WebRTCClient    │←─processed────→│   ImageProcessor    │
+│ (webrtc.js)     │   video         │ (image_processor.py)│
+│                 │                 │         │           │
+│ StatsManager    │←─stats JSON────→│ DataChannel stats   │
+│ (stats.js)      │  (DataChannel)  │                     │
+└─────────────────┘                 └─────────────────────┘
+```
+
+**Data Flow:**
+1. `CameraManager` captures video → WebRTC track
+2. `WebRTCClient` handles signaling via WebSocket (`/ws`)
+3. Server's `VideoTransformTrack` receives frames, applies `ImageProcessor.process()` (Canny edge detection)
+4. Stats (fps, resolution, processing_time_ms, latency) sent back via DataChannel
 
 ## Rules
+
 - Google Style Guide, 2-space indent
-- 全コードにテスト必須
-- Python: 型ヒント必須、mypy strict mode
-- main直接コミット禁止、PR最大300行
+- Tests required for all code
+- Python: Type hints required, mypy strict mode
+- No direct commits to main, PR max 300 lines
 
-## Skill Usage (必須)
-以下のタイミングで対応するskillを必ず使用すること：
+## Skill Usage (Required)
 
-| タイミング | Skill | 説明 |
-|-----------|-------|------|
-| ブランチ作成時 | `branch` | 命名規則に従ったブランチ作成 |
-| コード変更後 | `test` | 全テスト実行 |
-| コミット前 | `pre-commit` | ブランチ状態確認（マージ済みブランチでの作業防止） |
-| コミット前 | `lint` | 静的解析（flake8, pylint, ESLint） |
-| コミット前 | `typecheck` | 型チェック（mypy） |
-| PR作成前 | `review` | 変更内容のレビュー（300行制限確認含む） |
-| PR作成時 | `pr` | 行数チェック後にPR作成 |
+| When | Skill | Description |
+|------|-------|-------------|
+| Creating branch | `branch` | Create branch following naming conventions |
+| After code changes | `test` | Run all tests |
+| Before commit | `pre-commit` | Check branch status (prevent work on merged branches) |
+| Before commit | `lint` | Static analysis (flake8, pylint, ESLint) |
+| Before commit | `typecheck` | Type checking (mypy) |
+| Before PR | `review` | Review changes (includes 300-line limit check) |
+| Creating PR | `pr` | Create PR after line count check |
 
-**ワークフロー例:**
-1. `branch` → ブランチ作成
-2. コード実装
-3. `test` → テスト実行
-4. `pre-commit` → ブランチ状態確認
-5. `lint` → スタイルチェック（flake8 + pylint + ESLint全て）
-6. `typecheck` → 型チェック
-7. コミット
-8. `review` → 変更レビュー
-9. `pr` → PR作成
-
-## Setup
-```bash
-# pre-commit hookのインストール（初回のみ）
-pip install pre-commit
-pre-commit install
-```
-pre-commitにより、コミット時に自動でlint/test/typecheckが実行される。
+**Workflow:**
+1. `branch` - Create feature branch
+2. Implement code
+3. `test` - Run tests
+4. `pre-commit` - Check branch status
+5. `lint` - Run style checks
+6. `typecheck` - Run type checks
+7. Commit changes
+8. `review` - Review changes
+9. `pr` - Create pull request
 
 ## License
+
 - Apache 2.0 (Copyright 2026 iwatake2222)
-- 全ソースファイルにライセンスヘッダー必須
+- License header required in all source files
