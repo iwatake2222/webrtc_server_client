@@ -60,6 +60,8 @@ npm run lint
 
 ## Run
 
+### HTTP (Local Development)
+
 ```bash
 cd server
 source .venv/bin/activate
@@ -68,6 +70,26 @@ python -m src.main --host 0.0.0.0 --port 8080
 
 Open `http://localhost:8080` in browser
 
+### HTTPS (Remote Access)
+
+When accessing from a remote browser (e.g., AWS server), HTTPS is required for camera access (`navigator.mediaDevices`).
+
+1. Generate self-signed certificate:
+
+```bash
+cd server
+openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes -subj "/CN=localhost"
+```
+
+2. Start server with HTTPS:
+
+```bash
+python -m src.main --host 0.0.0.0 --port 8080 --cert cert.pem --key key.pem
+```
+
+3. Open `https://<server-ip>:8080` in browser
+   - Accept the self-signed certificate warning
+
 ### Command Line Options
 
 | Option | Default | Description |
@@ -75,6 +97,8 @@ Open `http://localhost:8080` in browser
 | `--host` | `0.0.0.0` | Host address to bind |
 | `--port` | `8080` | Port to listen on |
 | `--log-level` | `INFO` | Log level (DEBUG/INFO/WARNING/ERROR) |
+| `--cert` | None | Path to SSL certificate file (enables HTTPS) |
+| `--key` | None | Path to SSL private key file |
 
 ### Endpoints
 

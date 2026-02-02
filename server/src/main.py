@@ -17,6 +17,8 @@
 import argparse
 import asyncio
 import logging
+import ssl
+from pathlib import Path
 
 from src.webrtc_server import WebRTCServer
 
@@ -47,6 +49,18 @@ def parse_args() -> argparse.Namespace:
       choices=["DEBUG", "INFO", "WARNING", "ERROR"],
       help="Logging level (default: INFO)"
   )
+  parser.add_argument(
+      "--cert",
+      type=str,
+      default=None,
+      help="Path to SSL certificate file (enables HTTPS)"
+  )
+  parser.add_argument(
+      "--key",
+      type=str,
+      default=None,
+      help="Path to SSL private key file"
+  )
   return parser.parse_args()
 
 
@@ -59,7 +73,18 @@ async def main() -> None:
       format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
   )
 
-  server = WebRTCServer(host=args.host, port=args.port)
+  ssl_context = None
+  if args.cert and args.key:
+    cert_path = Path(args.cert)
+    key_path = Path(args.key)
+    if not cert_path.exists():
+      raise FileNotFoundError(f"Certificate file not found: {cert_path}")
+    if not key_path.exists():
+      raise FileNotFoundError(f"Key file not found: {key_path}")
+    ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+    ssl_context.load_cert_chain(str(cert_path), str(key_path))
+
+  server = WebRTCServer(host=args.host, port=args.port, ssl_context=ssl_context)
 
   try:
     await server.start()
