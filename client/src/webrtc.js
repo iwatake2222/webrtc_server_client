@@ -76,9 +76,12 @@ export class WebRTCClient {
       const offer = await this.peerConnection.createOffer();
       await this.peerConnection.setLocalDescription(offer);
 
+      // Wait for ICE gathering to complete before sending offer
+      await this.waitForIceGathering();
+
       this.websocket.send(JSON.stringify({
-        type: offer.type,
-        sdp: offer.sdp,
+        type: this.peerConnection.localDescription.type,
+        sdp: this.peerConnection.localDescription.sdp,
       }));
 
       await this.waitForAnswer();
@@ -86,6 +89,43 @@ export class WebRTCClient {
       this.handleError(error);
       throw error;
     }
+  }
+
+  /**
+   * Waits for ICE gathering to complete.
+   * @return {Promise<void>}
+   * @private
+   */
+  waitForIceGathering() {
+    return new Promise((resolve) => {
+      if (!this.peerConnection) {
+        resolve();
+        return;
+      }
+      if (this.peerConnection.iceGatheringState === 'complete') {
+        resolve();
+        return;
+      }
+      const checkState = () => {
+        if (this.peerConnection &&
+            this.peerConnection.iceGatheringState === 'complete') {
+          this.peerConnection.removeEventListener(
+            'icegatheringstatechange', checkState);
+          resolve();
+        }
+      };
+      this.peerConnection.addEventListener(
+        'icegatheringstatechange', checkState);
+
+      // Timeout after 5 seconds
+      setTimeout(() => {
+        if (this.peerConnection) {
+          this.peerConnection.removeEventListener(
+            'icegatheringstatechange', checkState);
+        }
+        resolve();
+      }, 5000);
+    });
   }
 
   /**
