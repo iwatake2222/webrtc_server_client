@@ -27,16 +27,18 @@ from src.processors.canny_processor import CannyProcessor
 
 
 def _format_sensor_value(value: Any) -> Any:
-  """Format a sensor value to 3 decimal places if it's a float.
+  """Format a sensor value to 3 decimal places if it's a number.
 
   Args:
     value: The value to format.
 
   Returns:
-    Formatted value (rounded to 3 decimals if float, otherwise unchanged).
+    Formatted value as string with 3 decimals if numeric, otherwise unchanged.
   """
   if isinstance(value, float):
-    return round(value, 3)
+    return f"{value:.3f}"
+  if isinstance(value, int):
+    return f"{value:.3f}"
   return value
 
 

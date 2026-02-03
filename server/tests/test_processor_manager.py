@@ -218,25 +218,25 @@ def test_manager_set_sensor_data() -> None:
   manager.set_sensor_data(sensor_data)
   _, stats = manager.process(input_frame)
 
-  # Values are formatted to 3 decimal places
+  # Values are formatted to 3 decimal places as strings
   expected = {
       "geolocation": {
-          "latitude": 35.676,
-          "longitude": 139.65,
-          "altitude": 40,
-          "accuracy": 10,
-          "heading": 90,
-          "speed": 1.5,
+          "latitude": "35.676",
+          "longitude": "139.650",
+          "altitude": "40.000",
+          "accuracy": "10.000",
+          "heading": "90.000",
+          "speed": "1.500",
       },
       "accelerometer": {
-          "x": 0.5,
-          "y": -0.3,
-          "z": 9.8,
+          "x": "0.500",
+          "y": "-0.300",
+          "z": "9.800",
       },
       "gyroscope": {
-          "alpha": 180,
-          "beta": 45,
-          "gamma": -30,
+          "alpha": "180.000",
+          "beta": "45.000",
+          "gamma": "-30.000",
       },
   }
   assert stats["sensor_data"] == expected
@@ -291,7 +291,7 @@ def test_manager_reset_clears_sensor_data() -> None:
 
 
 def test_manager_sensor_data_formatted_to_3_decimals() -> None:
-  """Test that sensor data values are rounded to 3 decimal places."""
+  """Test that sensor data values are formatted to 3 decimal places."""
   manager = ProcessorManager()
   input_frame = np.zeros((100, 100, 3), dtype=np.uint8)
 
@@ -316,19 +316,19 @@ def test_manager_sensor_data_formatted_to_3_decimals() -> None:
   _, stats = manager.process(input_frame)
 
   geo = stats["sensor_data"]["geolocation"]
-  assert geo["latitude"] == 35.676
-  assert geo["longitude"] == 139.65
-  assert geo["altitude"] == 40.123
+  assert geo["latitude"] == "35.676"
+  assert geo["longitude"] == "139.650"
+  assert geo["altitude"] == "40.123"
 
   accel = stats["sensor_data"]["accelerometer"]
-  assert accel["x"] == 0.123
-  assert accel["y"] == -0.988
-  assert accel["z"] == 9.807
+  assert accel["x"] == "0.123"
+  assert accel["y"] == "-0.988"
+  assert accel["z"] == "9.807"
 
   gyro = stats["sensor_data"]["gyroscope"]
-  assert gyro["alpha"] == 180.111
-  assert gyro["beta"] == 46.0
-  assert gyro["gamma"] == -30.555
+  assert gyro["alpha"] == "180.111"
+  assert gyro["beta"] == "46.000"
+  assert gyro["gamma"] == "-30.555"
 
 
 def test_manager_sensor_data_preserves_none_values() -> None:
@@ -347,13 +347,13 @@ def test_manager_sensor_data_preserves_none_values() -> None:
   _, stats = manager.process(input_frame)
 
   geo = stats["sensor_data"]["geolocation"]
-  assert geo["latitude"] == 35.676
+  assert geo["latitude"] == "35.676"
   assert geo["longitude"] is None
   assert geo["altitude"] is None
 
 
-def test_manager_sensor_data_preserves_int_values() -> None:
-  """Test that integer values in sensor data are preserved as integers."""
+def test_manager_sensor_data_formats_int_as_string() -> None:
+  """Test that integer values are formatted as strings with 3 decimals."""
   manager = ProcessorManager()
   input_frame = np.zeros((100, 100, 3), dtype=np.uint8)
 
@@ -367,6 +367,5 @@ def test_manager_sensor_data_preserves_int_values() -> None:
   _, stats = manager.process(input_frame)
 
   geo = stats["sensor_data"]["geolocation"]
-  assert geo["latitude"] == 35.676
-  assert geo["accuracy"] == 10
-  assert isinstance(geo["accuracy"], int)
+  assert geo["latitude"] == "35.676"
+  assert geo["accuracy"] == "10.000"
