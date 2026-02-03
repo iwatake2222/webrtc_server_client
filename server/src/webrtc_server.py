@@ -32,7 +32,7 @@ from aiortc import (
 from aiortc.contrib.media import MediaRelay
 from av import VideoFrame
 
-from src.image_processor import ImageProcessor
+from src.processor_manager import ProcessorManager
 
 DEFAULT_CLIENT_DIR = Path(__file__).parent.parent.parent / "client"
 
@@ -40,26 +40,26 @@ logger = logging.getLogger(__name__)
 
 
 class VideoTransformTrack(MediaStreamTrack):
-  """A video track that applies edge detection to incoming frames."""
+  """A video track that applies image processing to incoming frames."""
 
   kind = "video"
 
   def __init__(
       self,
       track: MediaStreamTrack,
-      processor: ImageProcessor,
+      processor_manager: ProcessorManager,
       data_channel: Optional[RTCDataChannel] = None
   ) -> None:
     """Initialize the video transform track.
 
     Args:
       track: The source video track to transform.
-      processor: The image processor for edge detection.
+      processor_manager: The processor manager for image processing.
       data_channel: Optional data channel for sending stats.
     """
     super().__init__()
     self._track = track
-    self._processor = processor
+    self._processor_manager = processor_manager
     self._data_channel = data_channel
     self._frame_state: dict[str, Any] = {
         "latest": None,
@@ -146,13 +146,13 @@ class VideoTransformTrack(MediaStreamTrack):
     if frame is None:
       raise Exception("No frame available")
 
-    self._processor.set_client_timestamp(client_ts)
-    self._processor.set_client_frame_id(client_frame_id)
+    self._processor_manager.set_client_timestamp(client_ts)
+    self._processor_manager.set_client_frame_id(client_frame_id)
     img = frame.to_ndarray(format="bgr24")
 
     loop = asyncio.get_event_loop()
     processed_img, stats = await loop.run_in_executor(
-        None, self._processor.process, img
+        None, self._processor_manager.process, img
     )
 
     if self._data_channel is not None:
@@ -182,6 +182,7 @@ class ServerConfig:
   port: int = 8080
   client_dir: Path = DEFAULT_CLIENT_DIR
   ssl_context: Optional[ssl.SSLContext] = None
+  processor: str = "canny"
 
 
 class WebRTCServer:
@@ -192,7 +193,8 @@ class WebRTCServer:
       host: str = "0.0.0.0",
       port: int = 8080,
       client_dir: Optional[Path] = None,
-      ssl_context: Optional[ssl.SSLContext] = None
+      ssl_context: Optional[ssl.SSLContext] = None,
+      processor: str = "canny"
   ) -> None:
     """Initialize the WebRTC server.
 
@@ -201,12 +203,14 @@ class WebRTCServer:
       port: The port to listen on.
       client_dir: Path to client files directory for static file serving.
       ssl_context: Optional SSL context for HTTPS support.
+      processor: Image processor to use (e.g., 'canny', 'blur').
     """
     self._config = ServerConfig(
         host=host,
         port=port,
         client_dir=client_dir or DEFAULT_CLIENT_DIR,
-        ssl_context=ssl_context
+        ssl_context=ssl_context,
+        processor=processor
     )
     self._app: Optional[web.Application] = None
     self._runner: Optional[web.AppRunner] = None
@@ -299,7 +303,7 @@ class WebRTCServer:
 
     pc = RTCPeerConnection()
     self._pcs.add(pc)
-    processor = ImageProcessor()
+    processor_manager = ProcessorManager(processor=self._config.processor)
     transform_track: Optional[VideoTransformTrack] = None
 
     @pc.on("datachannel")
@@ -315,7 +319,7 @@ class WebRTCServer:
       if track.kind == "video":
         transform_track = VideoTransformTrack(
             self._relay.subscribe(track),
-            processor
+            processor_manager
         )
         pc.addTrack(transform_track)
 

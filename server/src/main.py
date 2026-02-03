@@ -61,6 +61,13 @@ def parse_args() -> argparse.Namespace:
       default=None,
       help="Path to SSL private key file"
   )
+  parser.add_argument(
+      "--processor",
+      type=str,
+      default="canny",
+      choices=["canny", "blur"],
+      help="Image processor to use (default: canny)"
+  )
   return parser.parse_args()
 
 
@@ -84,7 +91,12 @@ async def main() -> None:
     ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
     ssl_context.load_cert_chain(str(cert_path), str(key_path))
 
-  server = WebRTCServer(host=args.host, port=args.port, ssl_context=ssl_context)
+  server = WebRTCServer(
+      host=args.host,
+      port=args.port,
+      ssl_context=ssl_context,
+      processor=args.processor
+  )
 
   try:
     await server.start()

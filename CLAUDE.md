@@ -14,7 +14,8 @@ cd server
 uv venv                                         # Create venv
 uv sync                                         # Install dependencies
 source .venv/bin/activate                       # Activate venv
-python -m src.main --host 0.0.0.0 --port 8080   # Run server
+python -m src.main --host 0.0.0.0 --port 8080   # Run server (default: canny)
+python -m src.main --processor blur             # Run with blur processor
 pytest -v                                       # Run tests
 pytest tests/test_image_processor.py::test_xxx  # Single test
 flake8 src/ tests/                              # Lint
@@ -31,25 +32,152 @@ npm run lint              # ESLint
 
 ## Architecture
 
+### System Overview
+
 ```
 Browser (client/)                    Python Server (server/)
-┌─────────────────┐                 ┌─────────────────────┐
-│ CameraManager   │──video track──→│ VideoTransformTrack │
-│ (camera.js)     │                 │ (webrtc_server.py)  │
-│                 │                 │         │           │
-│ WebRTCClient    │←─processed────→│   ImageProcessor    │
-│ (webrtc.js)     │   video         │ (image_processor.py)│
-│                 │                 │         │           │
-│ StatsManager    │←─stats JSON────→│ DataChannel stats   │
-│ (stats.js)      │  (DataChannel)  │                     │
-└─────────────────┘                 └─────────────────────┘
+┌─────────────────┐                 ┌─────────────────────────────────┐
+│ CameraManager   │──video track──→│ VideoTransformTrack             │
+│ (camera.js)     │                 │ (webrtc_server.py)              │
+│                 │                 │         │                       │
+│ WebRTCClient    │←─processed─────│   ProcessorManager              │
+│ (webrtc.js)     │   video         │   (processor_manager.py)        │
+│                 │                 │         │                       │
+│ StatsManager    │──timestamp/────→│   BaseProcessor (Strategy)      │
+│ (stats.js)      │  frame_id       │     ├─ CannyProcessor           │
+│                 │←─stats JSON─────│     └─ BlurProcessor            │
+│                 │  (DataChannel)  │                                 │
+└─────────────────┘                 └─────────────────────────────────┘
 ```
 
-**Data Flow:**
-1. `CameraManager` captures video → WebRTC track
-2. `WebRTCClient` handles signaling via WebSocket (`/ws`)
-3. Server's `VideoTransformTrack` receives frames, applies `ImageProcessor.process()` (Canny edge detection)
-4. Stats (fps, resolution, processing_time_ms, latency) sent back via DataChannel
+### Processor Architecture (Strategy Pattern)
+
+```
+┌─────────────────────┐
+│  ProcessorManager   │  - Processor selection at startup
+│                     │  - FPS calculation & stats tracking
+│                     │  - Client timestamp/frame ID management
+└──────────┬──────────┘
+           │ uses
+           ▼
+┌─────────────────────┐
+│   BaseProcessor     │  Abstract base class (src/processors/base_processor.py)
+│   <<abstract>>      │
+│  + name: str        │
+│  + process(frame)   │
+└──────────┬──────────┘
+           │ implements
+     ┌─────┴─────┐
+     ▼           ▼
+┌──────────┐ ┌──────────┐
+│  Canny   │ │   Blur   │
+│Processor │ │Processor │
+└──────────┘ └──────────┘
+```
+
+**Key Files:**
+- `src/processor_manager.py` - Coordinates processing, tracks stats
+- `src/processors/base_processor.py` - Abstract base class
+- `src/processors/canny_processor.py` - Canny edge detection
+- `src/processors/blur_processor.py` - Gaussian blur
+
+### Data Flow
+
+```
+1. Startup
+   main.py --processor canny/blur
+       │
+       ▼
+   WebRTCServer(processor="canny")
+       │
+       ▼
+   ProcessorManager(processor="canny")
+       │
+       ▼
+   CannyProcessor() or BlurProcessor()
+
+2. Frame Processing (per WebSocket connection)
+   Client                          Server
+     │                               │
+     │──── video frame ────────────→│ VideoTransformTrack.recv()
+     │                               │      │
+     │──── timestamp JSON ─────────→│      │ (DataChannel)
+     │     {type:"timestamp",        │      │
+     │      ts, client_frame_id}     │      ▼
+     │                               │ ProcessorManager.process(frame)
+     │                               │      │
+     │                               │      ▼
+     │                               │ BaseProcessor.process(frame)
+     │                               │      │
+     │←─── processed frame ─────────│←─────┘
+     │                               │
+     │←─── stats JSON ──────────────│ (DataChannel)
+     │     {frame_id, width, height, │
+     │      fps, processing_time_ms, │
+     │      processor, client_ts,    │
+     │      client_frame_id}         │
+```
+
+### DataChannel Messages
+
+**Client → Server (timestamp):**
+```json
+{
+  "type": "timestamp",
+  "ts": 1234567890,
+  "client_frame_id": 42
+}
+```
+
+**Server → Client (stats):**
+```json
+{
+  "frame_id": 123,
+  "width": 640,
+  "height": 480,
+  "fps": 30.0,
+  "processing_time_ms": 5.23,
+  "processor": "canny",
+  "client_ts": 1234567890,
+  "client_frame_id": 42
+}
+```
+※ `client_ts`, `client_frame_id` はクライアントから送信された場合のみ含まれる
+
+### Adding New Processor
+
+1. Create `src/processors/new_processor.py`:
+```python
+class NewProcessor(BaseProcessor):
+  @property
+  def name(self) -> str:
+    return "new"
+
+  def process(self, frame: NDArray[np.uint8]) -> tuple[NDArray[np.uint8], dict[str, Any]]:
+    # Process frame
+    return processed, {"processor": self.name}
+```
+
+2. Register in `src/processor_manager.py`:
+```python
+def _create_processor(self, name: str) -> BaseProcessor:
+  if name == "canny":
+    return CannyProcessor()
+  if name == "blur":
+    return BlurProcessor()
+  if name == "new":
+    return NewProcessor()
+  raise ValueError(f"Unknown processor: {name}")
+```
+
+3. Add CLI option in `src/main.py`:
+```python
+choices=["canny", "blur", "new"]
+```
+
+4. Export in `src/processors/__init__.py`
+
+5. Add tests in `tests/test_new_processor.py`
 
 ## Rules
 
