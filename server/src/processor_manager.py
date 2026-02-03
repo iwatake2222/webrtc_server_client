@@ -21,7 +21,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from src.fps_tracker import FpsTracker
-from src.processors.base_processor import BaseProcessor, ProcessContext
+from src.processors.base_processor import BaseProcessor, ClientData
 from src.processors.blur_processor import BlurProcessor
 from src.processors.canny_processor import CannyProcessor
 
@@ -125,12 +125,12 @@ class ProcessorManager:
     start_time = time.time()
     height, width = frame.shape[:2]
 
-    context = ProcessContext(
+    client_data = ClientData(
         client_timestamp=self._client_timestamp,
         client_frame_id=self._client_frame_id,
         sensor_data=self._sensor_data,
     )
-    processed, processor_stats = self._processor.process(frame, context)
+    processed, processor_stats = self._processor.process(frame, client_data)
 
     processing_time_ms = (time.time() - start_time) * 1000
     self._fps_tracker.update()

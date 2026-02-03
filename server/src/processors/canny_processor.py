@@ -20,7 +20,7 @@ import cv2
 import numpy as np
 from numpy.typing import NDArray
 
-from src.processors.base_processor import BaseProcessor, ProcessContext
+from src.processors.base_processor import BaseProcessor, ClientData
 
 
 class CannyProcessor(BaseProcessor):
@@ -52,13 +52,13 @@ class CannyProcessor(BaseProcessor):
   def process(
       self,
       frame: NDArray[np.uint8],
-      context: ProcessContext | None = None
+      client_data: ClientData | None = None
   ) -> tuple[NDArray[np.uint8], dict[str, Any]]:
     """Apply Canny edge detection to the frame.
 
     Args:
       frame: Input image as BGR numpy array.
-      context: Optional context with client data (timestamp, sensor data).
+      client_data: Optional client data (timestamp, sensor data).
 
     Returns:
       Tuple of (processed_frame, stats).
@@ -66,9 +66,9 @@ class CannyProcessor(BaseProcessor):
       - stats: Dictionary with threshold values
     """
     # Example: Access sensor data if available
-    # if context and context.geolocation:
-    #   lat = context.geolocation.get("latitude")
-    #   lon = context.geolocation.get("longitude")
+    # if client_data and client_data.geolocation:
+    #   lat = client_data.geolocation.get("latitude")
+    #   lon = client_data.geolocation.get("longitude")
     edges = cv2.Canny(frame, self._threshold1, self._threshold2)
     processed = cast(
         NDArray[np.uint8],

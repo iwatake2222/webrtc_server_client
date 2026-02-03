@@ -20,7 +20,7 @@ import cv2
 import numpy as np
 from numpy.typing import NDArray
 
-from src.processors.base_processor import BaseProcessor, ProcessContext
+from src.processors.base_processor import BaseProcessor, ClientData
 
 
 class BlurProcessor(BaseProcessor):
@@ -48,13 +48,13 @@ class BlurProcessor(BaseProcessor):
   def process(
       self,
       frame: NDArray[np.uint8],
-      context: ProcessContext | None = None
+      client_data: ClientData | None = None
   ) -> tuple[NDArray[np.uint8], dict[str, Any]]:
     """Apply Gaussian blur to the frame.
 
     Args:
       frame: Input image as BGR numpy array.
-      context: Optional context with client data (timestamp, sensor data).
+      client_data: Optional client data (timestamp, sensor data).
 
     Returns:
       Tuple of (processed_frame, stats).
@@ -62,8 +62,8 @@ class BlurProcessor(BaseProcessor):
       - stats: Dictionary with processor name
     """
     # Example: Access sensor data if available
-    # if context and context.accelerometer:
-    #   accel_x = context.accelerometer.get("x")
+    # if client_data and client_data.accelerometer:
+    #   accel_x = client_data.accelerometer.get("x")
     processed = cast(
         NDArray[np.uint8],
         cv2.GaussianBlur(

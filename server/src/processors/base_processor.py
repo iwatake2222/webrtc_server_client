@@ -23,11 +23,11 @@ from numpy.typing import NDArray
 
 
 @dataclass
-class ProcessContext:
-  """Context information passed to processors.
+class ClientData:
+  """Client-side data passed to processors.
 
-  Contains client-side data that processors can use for context-aware
-  processing, such as sensor data from mobile devices.
+  Contains data from the client device that processors can use for
+  context-aware processing, such as sensor data from mobile devices.
 
   Attributes:
     client_timestamp: Client timestamp in milliseconds for latency calculation.
@@ -81,13 +81,13 @@ class BaseProcessor(ABC):
   def process(
       self,
       frame: NDArray[np.uint8],
-      context: ProcessContext | None = None
+      client_data: ClientData | None = None
   ) -> tuple[NDArray[np.uint8], dict[str, Any]]:
     """Process a video frame.
 
     Args:
       frame: Input image as BGR numpy array (H x W x 3).
-      context: Optional context with client data (timestamp, sensor data).
+      client_data: Optional client data (timestamp, sensor data).
 
     Returns:
       Tuple of (processed_frame, processor_stats).
@@ -95,9 +95,9 @@ class BaseProcessor(ABC):
       - processor_stats: Dictionary with processor-specific statistics
 
     Example:
-      def process(self, frame, context=None):
-        if context and context.geolocation:
-          lat = context.geolocation.get("latitude")
+      def process(self, frame, client_data=None):
+        if client_data and client_data.geolocation:
+          lat = client_data.geolocation.get("latitude")
           # Use geolocation in processing...
         return processed_frame, stats
     """
