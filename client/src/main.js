@@ -201,6 +201,7 @@ function buildConstraints(resolution, deviceId) {
   const videoConstraints = {
     width: {ideal: width},
     height: {ideal: height},
+    frameRate: {max: 30},
   };
   if (deviceId) {
     videoConstraints.deviceId = {exact: deviceId};
