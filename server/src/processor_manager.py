@@ -21,7 +21,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from src.fps_tracker import FpsTracker
-from src.processors.base_processor import BaseProcessor
+from src.processors.base_processor import BaseProcessor, ProcessContext
 from src.processors.blur_processor import BlurProcessor
 from src.processors.canny_processor import CannyProcessor
 
@@ -49,6 +49,7 @@ class ProcessorManager:
     self._processor: BaseProcessor = self._create_processor(processor)
     self._client_timestamp: int | None = None
     self._client_frame_id: int | None = None
+    self._sensor_data: dict[str, Any] | None = None
     self._fps_tracker = FpsTracker()
 
   def _create_processor(self, name: str) -> BaseProcessor:
@@ -90,6 +91,23 @@ class ProcessorManager:
     """
     self._client_frame_id = frame_id
 
+  def set_sensor_data(self, sensor_data: dict[str, Any] | None) -> None:
+    """Set the sensor data from client.
+
+    Args:
+      sensor_data: Sensor data dict containing geolocation, accelerometer,
+        gyroscope, or None to clear.
+    """
+    self._sensor_data = sensor_data
+
+  def get_sensor_data(self) -> dict[str, Any] | None:
+    """Get the current sensor data.
+
+    Returns:
+      The current sensor data dict or None if not set.
+    """
+    return self._sensor_data
+
   def process(
       self,
       frame: NDArray[np.uint8]
@@ -107,7 +125,12 @@ class ProcessorManager:
     start_time = time.time()
     height, width = frame.shape[:2]
 
-    processed, processor_stats = self._processor.process(frame)
+    context = ProcessContext(
+        client_timestamp=self._client_timestamp,
+        client_frame_id=self._client_frame_id,
+        sensor_data=self._sensor_data,
+    )
+    processed, processor_stats = self._processor.process(frame, context)
 
     processing_time_ms = (time.time() - start_time) * 1000
     self._fps_tracker.update()
@@ -121,6 +144,9 @@ class ProcessorManager:
     if self._client_frame_id is not None:
       stats["client_frame_id"] = self._client_frame_id
 
+    if self._sensor_data is not None:
+      stats["sensor_data"] = self._sensor_data
+
     return processed, stats
 
   def reset_fps(self) -> None:
@@ -132,3 +158,4 @@ class ProcessorManager:
     self._fps_tracker.reset()
     self._client_timestamp = None
     self._client_frame_id = None
+    self._sensor_data = None

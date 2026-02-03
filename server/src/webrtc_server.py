@@ -66,11 +66,13 @@ class VideoTransformTrack(MediaStreamTrack):
         "lock": asyncio.Lock(),
         "ready": asyncio.Event(),
     }
-    self._client_data: dict[str, int | None] = {
+    self._client_data: dict[str, Any] = {
         "current_ts": None,
         "current_frame_id": None,
+        "current_sensor_data": None,
         "latest_ts": None,
         "latest_frame_id": None,
+        "latest_sensor_data": None,
     }
     self._receiver: dict[str, Any] = {
         "task": None,
@@ -98,6 +100,7 @@ class VideoTransformTrack(MediaStreamTrack):
         if data.get("type") == "timestamp":
           self._client_data["current_ts"] = data.get("ts")
           self._client_data["current_frame_id"] = data.get("client_frame_id")
+          self._client_data["current_sensor_data"] = data.get("sensor_data")
       except (json.JSONDecodeError, TypeError) as e:
         logger.debug("Failed to parse data channel message: %s", e)
 
@@ -116,6 +119,9 @@ class VideoTransformTrack(MediaStreamTrack):
           self._client_data["latest_ts"] = self._client_data["current_ts"]
           current_frame_id = self._client_data["current_frame_id"]
           self._client_data["latest_frame_id"] = current_frame_id
+          self._client_data["latest_sensor_data"] = (
+              self._client_data["current_sensor_data"]
+          )
           self._frame_state["ready"].set()
       except Exception as e:
         logger.debug("Frame receiver stopped: %s", e)
@@ -138,9 +144,11 @@ class VideoTransformTrack(MediaStreamTrack):
       frame = self._frame_state["latest"]
       client_ts = self._client_data["latest_ts"]
       client_frame_id = self._client_data["latest_frame_id"]
+      sensor_data = self._client_data["latest_sensor_data"]
       self._frame_state["latest"] = None
       self._client_data["latest_ts"] = None
       self._client_data["latest_frame_id"] = None
+      self._client_data["latest_sensor_data"] = None
       self._frame_state["ready"].clear()
 
     if frame is None:
@@ -148,6 +156,7 @@ class VideoTransformTrack(MediaStreamTrack):
 
     self._processor_manager.set_client_timestamp(client_ts)
     self._processor_manager.set_client_frame_id(client_frame_id)
+    self._processor_manager.set_sensor_data(sensor_data)
     img = frame.to_ndarray(format="bgr24")
 
     loop = asyncio.get_event_loop()

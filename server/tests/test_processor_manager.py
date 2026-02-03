@@ -188,3 +188,82 @@ def test_manager_different_processors_produce_different_output() -> None:
   # Canny produces edges (mostly black with white edges)
   # Blur produces smoothed version (keeps overall brightness)
   assert not np.array_equal(processed_canny, processed_blur)
+
+
+def test_manager_set_sensor_data() -> None:
+  """Test setting sensor data."""
+  manager = ProcessorManager()
+  input_frame = np.zeros((100, 100, 3), dtype=np.uint8)
+
+  sensor_data = {
+      "geolocation": {
+          "latitude": 35.6762,
+          "longitude": 139.6503,
+          "altitude": 40,
+          "accuracy": 10,
+          "heading": 90,
+          "speed": 1.5,
+      },
+      "accelerometer": {
+          "x": 0.5,
+          "y": -0.3,
+          "z": 9.8,
+      },
+      "gyroscope": {
+          "alpha": 180,
+          "beta": 45,
+          "gamma": -30,
+      },
+  }
+  manager.set_sensor_data(sensor_data)
+  _, stats = manager.process(input_frame)
+
+  assert stats["sensor_data"] == sensor_data
+
+
+def test_manager_get_sensor_data() -> None:
+  """Test getting sensor data."""
+  manager = ProcessorManager()
+  sensor_data = {"geolocation": {"latitude": 35.6762}}
+
+  manager.set_sensor_data(sensor_data)
+  result = manager.get_sensor_data()
+
+  assert result == sensor_data
+
+
+def test_manager_sensor_data_not_included_by_default() -> None:
+  """Test that sensor_data is not included when not set."""
+  manager = ProcessorManager()
+  input_frame = np.zeros((100, 100, 3), dtype=np.uint8)
+
+  _, stats = manager.process(input_frame)
+
+  assert "sensor_data" not in stats
+
+
+def test_manager_clear_sensor_data() -> None:
+  """Test clearing sensor data."""
+  manager = ProcessorManager()
+  input_frame = np.zeros((100, 100, 3), dtype=np.uint8)
+
+  sensor_data = {"geolocation": {"latitude": 35.6762}}
+  manager.set_sensor_data(sensor_data)
+  manager.set_sensor_data(None)
+  _, stats = manager.process(input_frame)
+
+  assert "sensor_data" not in stats
+
+
+def test_manager_reset_clears_sensor_data() -> None:
+  """Test that reset clears sensor data."""
+  manager = ProcessorManager()
+  input_frame = np.zeros((100, 100, 3), dtype=np.uint8)
+
+  sensor_data = {"geolocation": {"latitude": 35.6762}}
+  manager.set_sensor_data(sensor_data)
+  manager.reset()
+  _, stats = manager.process(input_frame)
+
+  assert "sensor_data" not in stats
+  assert manager.get_sensor_data() is None

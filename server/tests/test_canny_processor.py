@@ -16,6 +16,7 @@
 
 import numpy as np
 
+from src.processors.base_processor import ProcessContext
 from src.processors.canny_processor import CannyProcessor
 
 
@@ -78,3 +79,65 @@ def test_canny_with_various_sizes() -> None:
     processed, _ = processor.process(input_frame)
 
     assert processed.shape == (height, width, 3)
+
+
+def test_canny_process_with_context() -> None:
+  """Test processing with context."""
+  processor = CannyProcessor()
+  input_frame = np.zeros((100, 100, 3), dtype=np.uint8)
+  context = ProcessContext(
+      client_timestamp=1234567890,
+      client_frame_id=42,
+      sensor_data={
+          "geolocation": {"latitude": 35.6762, "longitude": 139.6503},
+          "accelerometer": {"x": 0.5, "y": -0.3, "z": 9.8},
+      }
+  )
+
+  processed, stats = processor.process(input_frame, context)
+
+  assert processed.shape == input_frame.shape
+  assert stats["processor"] == "canny"
+
+
+def test_canny_process_without_context() -> None:
+  """Test processing without context (backward compatibility)."""
+  processor = CannyProcessor()
+  input_frame = np.zeros((100, 100, 3), dtype=np.uint8)
+
+  processed, stats = processor.process(input_frame)
+
+  assert processed.shape == input_frame.shape
+  assert stats["processor"] == "canny"
+
+
+def test_process_context_properties() -> None:
+  """Test ProcessContext convenience properties."""
+  sensor_data = {
+      "geolocation": {"latitude": 35.6762},
+      "accelerometer": {"x": 0.5},
+      "gyroscope": {"alpha": 180},
+  }
+  context = ProcessContext(
+      client_timestamp=1234567890,
+      client_frame_id=42,
+      sensor_data=sensor_data,
+  )
+
+  assert context.client_timestamp == 1234567890
+  assert context.client_frame_id == 42
+  assert context.geolocation == {"latitude": 35.6762}
+  assert context.accelerometer == {"x": 0.5}
+  assert context.gyroscope == {"alpha": 180}
+
+
+def test_process_context_none_sensor_data() -> None:
+  """Test ProcessContext properties when sensor_data is None."""
+  context = ProcessContext()
+
+  assert context.client_timestamp is None
+  assert context.client_frame_id is None
+  assert context.sensor_data is None
+  assert context.geolocation is None
+  assert context.accelerometer is None
+  assert context.gyroscope is None
