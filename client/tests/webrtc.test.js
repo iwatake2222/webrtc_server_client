@@ -25,6 +25,7 @@ describe('WebRTCClient', () => {
   let mockDataChannel;
   let mockStream;
   let mockTrack;
+  let mockSender;
 
   beforeEach(() => {
     global.WebSocket = vi.fn();
@@ -52,7 +53,7 @@ describe('WebRTCClient', () => {
       })),
       setLocalDescription: vi.fn(() => Promise.resolve()),
       setRemoteDescription: vi.fn(() => Promise.resolve()),
-      addTrack: vi.fn(),
+      addTrack: vi.fn(() => mockSender),
       createDataChannel: vi.fn(() => mockDataChannel),
       close: vi.fn(),
       connectionState: 'new',
@@ -76,6 +77,11 @@ describe('WebRTCClient', () => {
 
     mockTrack = {
       kind: 'video',
+    };
+
+    mockSender = {
+      getParameters: vi.fn(() => ({encodings: [{}]})),
+      setParameters: vi.fn(() => Promise.resolve()),
     };
 
     mockStream = {

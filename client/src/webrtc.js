@@ -72,7 +72,10 @@ export class WebRTCClient {
       this.createDataChannel();
 
       localStream.getTracks().forEach((track) => {
-        this.peerConnection.addTrack(track, localStream);
+        const sender = this.peerConnection.addTrack(track, localStream);
+        if (track.kind === 'video') {
+          this.configureVideoSender(sender);
+        }
       });
 
       const offer = await this.peerConnection.createOffer();
@@ -90,6 +93,26 @@ export class WebRTCClient {
     } catch (error) {
       this.handleError(error);
       throw error;
+    }
+  }
+
+  /**
+   * Configures video sender to maintain resolution.
+   * @param {RTCRtpSender} sender - The RTP sender for video.
+   * @private
+   */
+  async configureVideoSender(sender) {
+    const params = sender.getParameters();
+    if (!params.encodings || params.encodings.length === 0) {
+      params.encodings = [{}];
+    }
+    params.encodings[0].scaleResolutionDownBy = 1.0;
+    // Set high max bitrate (8 Mbps) to prevent quality degradation
+    params.encodings[0].maxBitrate = 8000000;
+    try {
+      await sender.setParameters(params);
+    } catch (error) {
+      console.warn('Failed to set video sender parameters:', error);
     }
   }
 
