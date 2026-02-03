@@ -16,6 +16,7 @@
 
 import numpy as np
 
+from src.processors.base_processor import ClientData
 from src.processors.canny_processor import CannyProcessor
 
 
@@ -78,3 +79,65 @@ def test_canny_with_various_sizes() -> None:
     processed, _ = processor.process(input_frame)
 
     assert processed.shape == (height, width, 3)
+
+
+def test_canny_process_with_client_data() -> None:
+  """Test processing with client data."""
+  processor = CannyProcessor()
+  input_frame = np.zeros((100, 100, 3), dtype=np.uint8)
+  client_data = ClientData(
+      client_timestamp=1234567890,
+      client_frame_id=42,
+      sensor_data={
+          "geolocation": {"latitude": 35.6762, "longitude": 139.6503},
+          "accelerometer": {"x": 0.5, "y": -0.3, "z": 9.8},
+      }
+  )
+
+  processed, stats = processor.process(input_frame, client_data)
+
+  assert processed.shape == input_frame.shape
+  assert stats["processor"] == "canny"
+
+
+def test_canny_process_without_client_data() -> None:
+  """Test processing without client data (backward compatibility)."""
+  processor = CannyProcessor()
+  input_frame = np.zeros((100, 100, 3), dtype=np.uint8)
+
+  processed, stats = processor.process(input_frame)
+
+  assert processed.shape == input_frame.shape
+  assert stats["processor"] == "canny"
+
+
+def test_client_data_properties() -> None:
+  """Test ClientData convenience properties."""
+  sensor_data = {
+      "geolocation": {"latitude": 35.6762},
+      "accelerometer": {"x": 0.5},
+      "gyroscope": {"alpha": 180},
+  }
+  client_data = ClientData(
+      client_timestamp=1234567890,
+      client_frame_id=42,
+      sensor_data=sensor_data,
+  )
+
+  assert client_data.client_timestamp == 1234567890
+  assert client_data.client_frame_id == 42
+  assert client_data.geolocation == {"latitude": 35.6762}
+  assert client_data.accelerometer == {"x": 0.5}
+  assert client_data.gyroscope == {"alpha": 180}
+
+
+def test_client_data_none_sensor_data() -> None:
+  """Test ClientData properties when sensor_data is None."""
+  client_data = ClientData()
+
+  assert client_data.client_timestamp is None
+  assert client_data.client_frame_id is None
+  assert client_data.sensor_data is None
+  assert client_data.geolocation is None
+  assert client_data.accelerometer is None
+  assert client_data.gyroscope is None

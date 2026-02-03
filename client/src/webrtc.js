@@ -43,6 +43,8 @@ export class WebRTCClient {
     this.onError = null;
     /** @type {function():number|null} */
     this.getClientFrameId = null;
+    /** @type {function():Object|null} */
+    this.getSensorData = null;
     /** @type {number|null} */
     this.timestampIntervalId = null;
     /** @type {number|null} */
@@ -268,6 +270,12 @@ export class WebRTCClient {
       };
       if (this.getClientFrameId) {
         message.client_frame_id = this.getClientFrameId();
+      }
+      if (this.getSensorData) {
+        const sensorData = this.getSensorData();
+        if (sensorData) {
+          message.sensor_data = sensorData;
+        }
       }
       this.dataChannel.send(JSON.stringify(message));
     }

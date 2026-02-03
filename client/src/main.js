@@ -20,11 +20,15 @@
  */
 
 import {CameraManager} from './camera.js';
+import {SensorManager} from './sensor.js';
 import {StatsManager} from './stats.js';
 import {WebRTCClient} from './webrtc.js';
 
 /** @type {CameraManager} */
 const cameraManager = new CameraManager();
+
+/** @type {SensorManager} */
+const sensorManager = new SensorManager();
 
 /** @type {WebRTCClient} */
 const webrtcClient = new WebRTCClient();
@@ -108,6 +112,7 @@ async function init() {
   };
 
   webrtcClient.getClientFrameId = () => cameraManager.getTotalFrameCount();
+  webrtcClient.getSensorData = () => sensorManager.getData();
 
   connectBtn.addEventListener('click', async () => {
     try {
@@ -117,6 +122,9 @@ async function init() {
       );
       await cameraManager.start(localVideo, constraints);
       statsManager.startCameraStatsCollection(cameraManager);
+
+      const sensorResults = await sensorManager.start();
+      console.log('Sensor activation results:', sensorResults);
 
       const stream = cameraManager.getStream();
       if (!stream) {
@@ -155,6 +163,7 @@ async function init() {
   function handleDisconnect() {
     webrtcClient.disconnect();
     cameraManager.stop();
+    sensorManager.stop();
     statsManager.stopCollection();
     statsManager.reset();
     remoteVideo.srcObject = null;

@@ -40,13 +40,16 @@ Browser (client/)                    Python Server (server/)
 │ CameraManager   │──video track──→│ VideoTransformTrack             │
 │ (camera.js)     │                 │ (webrtc_server.py)              │
 │                 │                 │         │                       │
-│ WebRTCClient    │←─processed─────│   ProcessorManager              │
-│ (webrtc.js)     │   video         │   (processor_manager.py)        │
+│ SensorManager   │──sensor data───→│   ProcessorManager              │
+│ (sensor.js)     │  (DataChannel)  │   (processor_manager.py)        │
 │                 │                 │         │                       │
-│ StatsManager    │──timestamp/────→│   BaseProcessor (Strategy)      │
-│ (stats.js)      │  frame_id       │     ├─ CannyProcessor           │
-│                 │←─stats JSON─────│     └─ BlurProcessor            │
-│                 │  (DataChannel)  │                                 │
+│ WebRTCClient    │←─processed─────│   BaseProcessor (Strategy)      │
+│ (webrtc.js)     │   video         │     ├─ CannyProcessor           │
+│                 │                 │     └─ BlurProcessor            │
+│ StatsManager    │──timestamp/────→│         │                       │
+│ (stats.js)      │  frame_id       │   ClientData (context)          │
+│                 │←─stats JSON─────│     - timestamp, frame_id       │
+│                 │  (DataChannel)  │     - sensor_data (GPS, IMU)    │
 └─────────────────┘                 └─────────────────────────────────┘
 ```
 
@@ -56,19 +59,20 @@ Browser (client/)                    Python Server (server/)
 ┌─────────────────────┐
 │  ProcessorManager   │  - Processor selection at startup
 │                     │  - FPS calculation & stats tracking
-│                     │  - Client timestamp/frame ID management
+│                     │  - Client data management (timestamp, sensor)
 └──────────┬──────────┘
            │ uses
            ▼
-┌─────────────────────┐
-│   BaseProcessor     │  Abstract base class (src/processors/base_processor.py)
-│   <<abstract>>      │
-│  + name: str        │
-│  + process(frame)   │
-└──────────┬──────────┘
-           │ implements
-     ┌─────┴─────┐
-     ▼           ▼
+┌─────────────────────┐       ┌─────────────────────┐
+│   BaseProcessor     │       │     ClientData      │
+│   <<abstract>>      │←──────│   (dataclass)       │
+│  + name: str        │       │  - client_timestamp │
+│  + process(frame,   │       │  - client_frame_id  │
+│      client_data)   │       │  - sensor_data      │
+└──────────┬──────────┘       │  + geolocation      │
+           │ implements       │  + accelerometer    │
+     ┌─────┴─────┐            │  + gyroscope        │
+     ▼           ▼            └─────────────────────┘
 ┌──────────┐ ┌──────────┐
 │  Canny   │ │   Blur   │
 │Processor │ │Processor │
@@ -77,9 +81,10 @@ Browser (client/)                    Python Server (server/)
 
 **Key Files:**
 - `src/processor_manager.py` - Coordinates processing, tracks stats
-- `src/processors/base_processor.py` - Abstract base class
+- `src/processors/base_processor.py` - Abstract base class, ClientData
 - `src/processors/canny_processor.py` - Canny edge detection
 - `src/processors/blur_processor.py` - Gaussian blur
+- `client/src/sensor.js` - Sensor data collection (GPS, accelerometer, gyroscope)
 
 ### Data Flow
 
@@ -120,12 +125,17 @@ Browser (client/)                    Python Server (server/)
 
 ### DataChannel Messages
 
-**Client → Server (timestamp):**
+**Client → Server (timestamp + sensor):**
 ```json
 {
   "type": "timestamp",
   "ts": 1234567890,
-  "client_frame_id": 42
+  "client_frame_id": 42,
+  "sensor_data": {
+    "geolocation": {"latitude": 35.6762, "longitude": 139.6503, "altitude": 40, "accuracy": 10},
+    "accelerometer": {"x": 0.5, "y": -0.3, "z": 9.8},
+    "gyroscope": {"alpha": 180, "beta": 45, "gamma": -30}
+  }
 }
 ```
 
@@ -139,21 +149,35 @@ Browser (client/)                    Python Server (server/)
   "processing_time_ms": 5.23,
   "processor": "canny",
   "client_ts": 1234567890,
-  "client_frame_id": 42
+  "client_frame_id": 42,
+  "sensor_data": { ... }
 }
 ```
-※ `client_ts`, `client_frame_id` はクライアントから送信された場合のみ含まれる
+※ `client_ts`, `client_frame_id`, `sensor_data` はクライアントから送信された場合のみ含まれる
 
 ### Adding New Processor
 
 1. Create `src/processors/new_processor.py`:
 ```python
+from src.processors.base_processor import BaseProcessor, ClientData
+
 class NewProcessor(BaseProcessor):
   @property
   def name(self) -> str:
     return "new"
 
-  def process(self, frame: NDArray[np.uint8]) -> tuple[NDArray[np.uint8], dict[str, Any]]:
+  def process(
+      self,
+      frame: NDArray[np.uint8],
+      client_data: ClientData | None = None
+  ) -> tuple[NDArray[np.uint8], dict[str, Any]]:
+    # Access sensor data if available
+    if client_data and client_data.geolocation:
+      lat = client_data.geolocation.get("latitude")
+      lon = client_data.geolocation.get("longitude")
+    if client_data and client_data.accelerometer:
+      accel = client_data.accelerometer  # {"x", "y", "z"}
+
     # Process frame
     return processed, {"processor": self.name}
 ```
