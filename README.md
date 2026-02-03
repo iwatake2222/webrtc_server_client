@@ -5,7 +5,8 @@ Real-time video processing application using Python + HTML/JavaScript WebRTC
 ## Features
 
 - Send camera video from client to server via WebRTC
-- Server applies Canny edge detection using OpenCV
+- Server applies image processing using OpenCV (Canny edge detection, Gaussian blur, etc.)
+- Extensible processor architecture - easily add new image processors
 - Return processed video to client in real-time
 - Send processing stats (image size, FPS, processing time) via DataChannel
 
@@ -65,7 +66,8 @@ npm run lint
 ```bash
 cd server
 source .venv/bin/activate
-python -m src.main --host 0.0.0.0 --port 8080
+python -m src.main --host 0.0.0.0 --port 8080                    # Canny edge detection (default)
+python -m src.main --host 0.0.0.0 --port 8080 --processor blur   # Gaussian blur
 ```
 
 Open `http://localhost:8080` in browser
@@ -84,7 +86,10 @@ openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -node
 2. Start server with HTTPS:
 
 ```bash
+cd server
+source .venv/bin/activate
 python -m src.main --host 0.0.0.0 --port 8080 --cert cert.pem --key key.pem
+python -m src.main --host 0.0.0.0 --port 8080 --cert cert.pem --key key.pem --processor blur
 ```
 
 3. Open `https://<server-ip>:8080` in browser
@@ -96,6 +101,7 @@ python -m src.main --host 0.0.0.0 --port 8080 --cert cert.pem --key key.pem
 |--------|---------|-------------|
 | `--host` | `0.0.0.0` | Host address to bind |
 | `--port` | `8080` | Port to listen on |
+| `--processor` | `canny` | Image processor to use (`canny`, `blur`) |
 | `--log-level` | `INFO` | Log level (DEBUG/INFO/WARNING/ERROR) |
 | `--cert` | None | Path to SSL certificate file (enables HTTPS) |
 | `--key` | None | Path to SSL private key file |
@@ -119,6 +125,9 @@ Region=ap-northeast-1
 AvailabilityZone=ap-northeast-1a
 ImageId=ami-0f65fc8c24ec8d2a1  # Ubuntu Server 24.04
 InstanceType=t3.medium
+# AvailabilityZone=ap-northeast-1d
+# ImageId=ami-0e7d0c8815f409923   # Deep Learning OSS Nvidia Driver AMI GPU PyTorch 2.9 (Ubuntu 24.04)
+# InstanceType=g5.4xlarge
 RootVolumeSize=256
 
 SystemName=webrtc-alpamayo
