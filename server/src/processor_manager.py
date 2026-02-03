@@ -20,6 +20,7 @@ from typing import Any
 import numpy as np
 from numpy.typing import NDArray
 
+from src.fps_tracker import FpsTracker
 from src.processors.base_processor import BaseProcessor
 from src.processors.blur_processor import BlurProcessor
 from src.processors.canny_processor import CannyProcessor
@@ -48,12 +49,7 @@ class ProcessorManager:
     self._processor: BaseProcessor = self._create_processor(processor)
     self._client_timestamp: int | None = None
     self._client_frame_id: int | None = None
-
-    # Statistics tracking
-    self._frame_count = 0
-    self._total_frame_count = 0
-    self._fps_start_time = time.time()
-    self._current_fps = 0.0
+    self._fps_tracker = FpsTracker()
 
   def _create_processor(self, name: str) -> BaseProcessor:
     """Create a processor by name.
@@ -109,36 +105,16 @@ class ProcessorManager:
       processor-specific stats, and optionally client_ts for latency.
     """
     start_time = time.time()
-
     height, width = frame.shape[:2]
 
-    # Process frame
     processed, processor_stats = self._processor.process(frame)
 
     processing_time_ms = (time.time() - start_time) * 1000
+    self._fps_tracker.update()
+    stats = self._fps_tracker.build_stats(width, height, processing_time_ms)
 
-    # Update FPS
-    self._frame_count += 1
-    self._total_frame_count += 1
-    elapsed = time.time() - self._fps_start_time
-    if elapsed >= 1.0:
-      self._current_fps = self._frame_count / elapsed
-      self._frame_count = 0
-      self._fps_start_time = time.time()
-
-    # Build stats dictionary
-    stats: dict[str, Any] = {
-        "frame_id": self._total_frame_count,
-        "width": width,
-        "height": height,
-        "fps": round(self._current_fps, 1),
-        "processing_time_ms": round(processing_time_ms, 2),
-    }
-
-    # Add processor-specific stats
     stats.update(processor_stats)
 
-    # Add client timestamp if available
     if self._client_timestamp is not None:
       stats["client_ts"] = self._client_timestamp
 
@@ -149,13 +125,10 @@ class ProcessorManager:
 
   def reset_fps(self) -> None:
     """Reset FPS calculation."""
-    self._frame_count = 0
-    self._fps_start_time = time.time()
-    self._current_fps = 0.0
+    self._fps_tracker.reset_fps()
 
   def reset(self) -> None:
     """Reset all state including frame count and client data."""
-    self.reset_fps()
-    self._total_frame_count = 0
+    self._fps_tracker.reset()
     self._client_timestamp = None
     self._client_frame_id = None

@@ -188,10 +188,12 @@ class ServerConfig:
 class WebRTCServer:
   """WebRTC server for receiving and processing video streams."""
 
+  # pylint: disable=too-many-arguments
   def __init__(
       self,
       host: str = "0.0.0.0",
       port: int = 8080,
+      *,
       client_dir: Optional[Path] = None,
       ssl_context: Optional[ssl.SSLContext] = None,
       processor: str = "canny"
