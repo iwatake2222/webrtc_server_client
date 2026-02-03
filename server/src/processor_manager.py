@@ -26,6 +26,43 @@ from src.processors.blur_processor import BlurProcessor
 from src.processors.canny_processor import CannyProcessor
 
 
+def _format_sensor_value(value: Any) -> Any:
+  """Format a sensor value to 3 decimal places if it's a float.
+
+  Args:
+    value: The value to format.
+
+  Returns:
+    Formatted value (rounded to 3 decimals if float, otherwise unchanged).
+  """
+  if isinstance(value, float):
+    return round(value, 3)
+  return value
+
+
+def _format_sensor_data(data: dict[str, Any] | None) -> dict[str, Any] | None:
+  """Format all numeric values in sensor data to 3 decimal places.
+
+  Args:
+    data: Sensor data dict or None.
+
+  Returns:
+    Formatted sensor data dict or None.
+  """
+  if data is None:
+    return None
+
+  formatted: dict[str, Any] = {}
+  for key, value in data.items():
+    if isinstance(value, dict):
+      formatted[key] = {
+          k: _format_sensor_value(v) for k, v in value.items()
+      }
+    else:
+      formatted[key] = _format_sensor_value(value)
+  return formatted
+
+
 class ProcessorManager:
   """Manages image processor and statistics.
 
@@ -145,7 +182,7 @@ class ProcessorManager:
       stats["client_frame_id"] = self._client_frame_id
 
     if self._sensor_data is not None:
-      stats["sensor_data"] = self._sensor_data
+      stats["sensor_data"] = _format_sensor_data(self._sensor_data)
 
     return processed, stats
 
