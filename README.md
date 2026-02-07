@@ -1,6 +1,8 @@
 # Alpamayo WebRTC Demo
 
-Real-time video processing application using WebRTC with NVIDIA Alpamayo trajectory prediction.
+Real-time video processing application using WebRTC with NVIDIA Alpamayo.
+
+![sample_result](https://github.com/user-attachments/assets/6a54b2d2-3392-437b-81a5-e93d29984488)
 
 ## Features
 
