@@ -21,6 +21,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from src.fps_tracker import FpsTracker
+from src.processors.alpamayo_processor import AlpamayoProcessor
 from src.processors.base_processor import BaseProcessor, ClientData
 from src.processors.blur_processor import BlurProcessor
 from src.processors.canny_processor import CannyProcessor
@@ -83,7 +84,7 @@ class ProcessorManager:
     """Initialize the processor manager.
 
     Args:
-      processor: Name of the processor to use ('canny' or 'blur').
+      processor: Name of the processor to use ('canny' or 'blur' or 'alpamayo').
     """
     self._processor: BaseProcessor = self._create_processor(processor)
     self._client_timestamp: int | None = None
@@ -95,7 +96,7 @@ class ProcessorManager:
     """Create a processor by name.
 
     Args:
-      name: Name of the processor ('canny' or 'blur').
+      name: Name of the processor ('canny' or 'blur' or 'alpamayo').
 
     Returns:
       The processor instance.
@@ -107,6 +108,9 @@ class ProcessorManager:
       return CannyProcessor()
     if name == "blur":
       return BlurProcessor()
+    if name == "alpamayo":
+      return AlpamayoProcessor()
+
     raise ValueError(f"Unknown processor: {name}")
 
   @property

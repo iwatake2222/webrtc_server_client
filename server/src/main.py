@@ -65,7 +65,7 @@ def parse_args() -> argparse.Namespace:
       "--processor",
       type=str,
       default="canny",
-      choices=["canny", "blur"],
+      choices=["canny", "blur", "alpamayo"],
       help="Image processor to use (default: canny)"
   )
   return parser.parse_args()
