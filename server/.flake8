@@ -1,4 +1,4 @@
 [flake8]
 max-line-length = 80
 indent-size = 2
-exclude = .venv,__pycache__
+exclude = .venv,__pycache__,demo_01_example_clip.py

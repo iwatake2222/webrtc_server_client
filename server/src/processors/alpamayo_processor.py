@@ -148,7 +148,8 @@ class AlpamayoProcessor(BaseProcessor):
     torch.cuda.manual_seed_all(42)
     start = time.time()
     with torch.autocast("cuda", dtype=torch.bfloat16):
-      pred_xyz, pred_rot, extra = _model.sample_trajectories_from_data_with_vlm_rollout(
+      sample_func = _model.sample_trajectories_from_data_with_vlm_rollout
+      pred_xyz, pred_rot, extra = sample_func(
           data=model_inputs,
           top_p=0.98,
           temperature=0.6,

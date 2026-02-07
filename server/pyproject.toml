@@ -22,6 +22,9 @@ dev = [
 testpaths = ["tests"]
 pythonpath = ["."]
 
+[tool.pylint.main]
+ignore = ["demo_01_example_clip.py", "alpamayo_processor.py", "utility.py"]
+
 [tool.pylint.format]
 indent-string = "  "
 max-line-length = 80
@@ -43,3 +46,20 @@ indent-size = 2
 strict = true
 warn_return_any = true
 warn_unused_configs = true
+
+[[tool.mypy.overrides]]
+module = [
+  "src.demo_01_example_clip",
+  "src.processors.alpamayo_processor",
+  "src.utility",
+]
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = [
+  "torch",
+  "torch.*",
+  "alpamayo_r1",
+  "alpamayo_r1.*",
+]
+ignore_missing_imports = true
