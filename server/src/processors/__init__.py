@@ -14,13 +14,15 @@
 
 """Image processors package."""
 
+from src.processors.alpamayo_processor import AlpamayoProcessor
 from src.processors.base_processor import BaseProcessor, ClientData
 from src.processors.blur_processor import BlurProcessor
 from src.processors.canny_processor import CannyProcessor
 
 __all__ = [
+    "AlpamayoProcessor",
     "BaseProcessor",
-    "ClientData",
-    "CannyProcessor",
     "BlurProcessor",
+    "CannyProcessor",
+    "ClientData",
 ]
