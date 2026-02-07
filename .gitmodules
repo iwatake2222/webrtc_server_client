@@ -1,0 +1,3 @@
+[submodule "server/alpamayo"]
+	path = server/alpamayo
+	url = https://github.com/NVlabs/alpamayo.git
