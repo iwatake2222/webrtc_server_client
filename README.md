@@ -1,4 +1,4 @@
-# Alpamayo Connected for Mobile
+# Alpamayo WebRTC Demo
 
 Real-time video processing application using WebRTC with NVIDIA Alpamayo trajectory prediction.
 
