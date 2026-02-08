@@ -4,6 +4,10 @@ NVIDIA Alpamayo streaming demo for mobile devices, implemented with WebRTC on AW
 
 ![sample_result](https://github.com/user-attachments/assets/6a54b2d2-3392-437b-81a5-e93d29984488)
 
+## Overview
+
+![overview](00_doc/overview.drawio.png)
+
 ## Features
 
 - Real-time video streaming from client to server via WebRTC
@@ -218,6 +222,13 @@ ssh ubuntu@i-00000000000000000
 # or
 ssh webrtc-ec2-server
 ```
+
+## Future Work(?)
+
+A Toy Edge–Server Collaborative End-to-End Autonomous Driving System.
+This is just a thought experiment and not a production-ready system.
+
+![e2e](00_doc/edge-server-e2e-system.drawio.png)
 
 ## Acknowledgments
 
