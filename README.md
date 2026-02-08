@@ -1,6 +1,6 @@
-# Alpamayo WebRTC Demo
+# Alpamayo WebRTC on AWS EC2
 
-Real-time video processing application using WebRTC with NVIDIA Alpamayo.
+NVIDIA Alpamayo streaming demo for mobile devices, implemented with WebRTC on AWS EC2.
 
 ![sample_result](https://github.com/user-attachments/assets/6a54b2d2-3392-437b-81a5-e93d29984488)
 
@@ -56,8 +56,6 @@ aws cloudformation deploy \
 # Install dependencies
 sudo apt update
 sudo apt install -y nvidia-cuda-toolkit python3-pip
-pip install huggingface_hub
-huggingface-cli login
 
 # Install uv
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -77,10 +75,18 @@ uv sync --active
 cd ..
 uv pip install -e .
 
-# Test demo
-python3 src/demo_01_example_clip.py
+pip install huggingface_hub
+huggingface-cli login
 
+# Optional: Run test demo
+python3 src/demo_01_example_clip.py
+```
+
+```bash
 # Generate SSL certificate and run server
+cd server
+source .venv/bin/activate
+
 openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes -subj "/CN=localhost"
 python -m src.main --host 0.0.0.0 --port 8080 --cert cert.pem --key key.pem --processor alpamayo
 ```
