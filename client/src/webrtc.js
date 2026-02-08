@@ -107,8 +107,9 @@ export class WebRTCClient {
       params.encodings = [{}];
     }
     params.encodings[0].scaleResolutionDownBy = 1.0;
-    // Set high max bitrate (8 Mbps) to prevent quality degradation
-    params.encodings[0].maxBitrate = 8000000;
+    // Set high max bitrate (20 Mbps) to prevent quality degradation
+    params.encodings[0].maxBitrate = 20_000_000;
+    params.encodings[0].maxFramerate = 10;
     try {
       await sender.setParameters(params);
     } catch (error) {

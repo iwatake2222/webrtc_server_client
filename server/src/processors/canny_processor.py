@@ -70,13 +70,14 @@ class CannyProcessor(BaseProcessor):
     #   lat = client_data.geolocation.get("latitude")
     #   lon = client_data.geolocation.get("longitude")
     edges = cv2.Canny(frame, self._threshold1, self._threshold2)
-    processed = cast(
-        NDArray[np.uint8],
-        cv2.cvtColor(edges, cv2.COLOR_GRAY2BGR)
-    )
+    img_output = cv2.cvtColor(edges, cv2.COLOR_GRAY2BGR)
+
+    # WebRTC may reduce the stream resolution if frame sizes vary,
+    # so we always send frames at the original resolution
+    img_output = cv2.resize(img_output, (frame.shape[1], frame.shape[0]))
 
     stats: dict[str, Any] = {
         "processor": self.name,
     }
 
-    return processed, stats
+    return cast(NDArray[np.uint8], img_output), stats

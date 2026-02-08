@@ -64,17 +64,18 @@ class BlurProcessor(BaseProcessor):
     # Example: Access sensor data if available
     # if client_data and client_data.accelerometer:
     #   accel_x = client_data.accelerometer.get("x")
-    processed = cast(
-        NDArray[np.uint8],
-        cv2.GaussianBlur(
-            frame,
-            (self._kernel_size, self._kernel_size),
-            0
-        )
+    img_output = cv2.GaussianBlur(
+        frame,
+        (self._kernel_size, self._kernel_size),
+        0
     )
+
+    # WebRTC may reduce the stream resolution if frame sizes vary,
+    # so we always send frames at the original resolution
+    img_output = cv2.resize(img_output, (frame.shape[1], frame.shape[0]))
 
     stats: dict[str, Any] = {
         "processor": self.name,
     }
 
-    return processed, stats
+    return cast(NDArray[np.uint8], img_output), stats
