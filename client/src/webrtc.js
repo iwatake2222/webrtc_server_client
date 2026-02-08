@@ -57,9 +57,10 @@ export class WebRTCClient {
    * Connects to the WebRTC server.
    * @param {string} serverUrl - WebSocket server URL.
    * @param {MediaStream} localStream - Local media stream to send.
+   * @param {string} [preferredCodec='vp8'] - Preferred video codec (vp8, h264, vp9).
    * @return {Promise<void>}
    */
-  async connect(serverUrl, localStream) {
+  async connect(serverUrl, localStream, preferredCodec = 'vp8') {
     try {
       this.websocket = new WebSocket(serverUrl);
       await this.waitForWebSocketOpen();
@@ -77,6 +78,8 @@ export class WebRTCClient {
           this.configureVideoSender(sender);
         }
       });
+
+      this.setPreferredCodec(preferredCodec);
 
       const offer = await this.peerConnection.createOffer();
       await this.peerConnection.setLocalDescription(offer);
@@ -109,11 +112,69 @@ export class WebRTCClient {
     params.encodings[0].scaleResolutionDownBy = 1.0;
     // Set high max bitrate (20 Mbps) to prevent quality degradation
     params.encodings[0].maxBitrate = 20_000_000;
-    params.encodings[0].maxFramerate = 10;
+    // params.encodings[0].maxFramerate = 10;
     try {
       await sender.setParameters(params);
     } catch (error) {
       console.warn('Failed to set video sender parameters:', error);
+    }
+  }
+
+  /**
+   * Sets the preferred video codec for the connection.
+   * @param {string} codecName - The codec name (vp8, h264, vp9).
+   * @private
+   */
+  setPreferredCodec(codecName) {
+    if (!this.peerConnection) return;
+
+    const transceivers = this.peerConnection.getTransceivers();
+    const videoTransceiver = transceivers.find(
+      (t) => t.sender.track && t.sender.track.kind === 'video'
+    );
+
+    if (!videoTransceiver) {
+      console.warn('No video transceiver found');
+      return;
+    }
+
+    const codecs = RTCRtpSender.getCapabilities('video')?.codecs;
+    if (!codecs) {
+      console.warn('Failed to get video codec capabilities');
+      return;
+    }
+
+    const codecMimeTypes = {
+      'vp8': 'video/VP8',
+      'h264': 'video/H264',
+      'vp9': 'video/VP9',
+    };
+
+    const preferredMimeType = codecMimeTypes[codecName.toLowerCase()];
+    if (!preferredMimeType) {
+      console.warn(`Unknown codec: ${codecName}`);
+      return;
+    }
+
+    const preferredCodecs = codecs.filter(
+      (c) => c.mimeType.toLowerCase() === preferredMimeType.toLowerCase()
+    );
+    const otherCodecs = codecs.filter(
+      (c) => c.mimeType.toLowerCase() !== preferredMimeType.toLowerCase()
+    );
+
+    if (preferredCodecs.length === 0) {
+      console.warn(`Codec ${codecName} is not supported by this browser`);
+      return;
+    }
+
+    const sortedCodecs = [...preferredCodecs, ...otherCodecs];
+
+    try {
+      videoTransceiver.setCodecPreferences(sortedCodecs);
+      console.log(`Preferred codec set to: ${codecName}`);
+    } catch (error) {
+      console.warn('Failed to set codec preferences:', error);
     }
   }
 

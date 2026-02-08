@@ -55,6 +55,9 @@ async function init() {
   const cameraSelect = /** @type {HTMLSelectElement} */ (
     document.getElementById('cameraSelect')
   );
+  const codecSelect = /** @type {HTMLSelectElement} */ (
+    document.getElementById('codecSelect')
+  );
   const connectBtn = /** @type {HTMLButtonElement} */ (
     document.getElementById('connectBtn')
   );
@@ -132,12 +135,14 @@ async function init() {
       }
 
       const serverUrl = serverUrlInput.value || getDefaultServerUrl();
-      await webrtcClient.connect(serverUrl, stream);
+      const preferredCodec = codecSelect.value || 'vp8';
+      await webrtcClient.connect(serverUrl, stream, preferredCodec);
 
       connectBtn.disabled = true;
       disconnectBtn.disabled = false;
       resolutionSelect.disabled = true;
       cameraSelect.disabled = true;
+      codecSelect.disabled = true;
       serverUrlInput.disabled = true;
 
       if (serverResponse) {
@@ -171,6 +176,7 @@ async function init() {
     disconnectBtn.disabled = true;
     resolutionSelect.disabled = false;
     cameraSelect.disabled = false;
+    codecSelect.disabled = false;
     serverUrlInput.disabled = false;
     if (serverResponse) {
       serverResponse.textContent = 'Disconnected.';
