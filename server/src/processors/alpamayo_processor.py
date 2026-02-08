@@ -199,6 +199,10 @@ class AlpamayoProcessor(BaseProcessor):
         (10, 40),
     )
 
+    # WebRTC may reduce the stream resolution if frame sizes vary,
+    # so we always send frames at the original resolution
+    img_output = cv2.resize(img_output, (original_width, original_height))
+
     stats: dict[str, Any] = {
         "inference_time_sec": f"{elapsed:.3f}",
         "cot": ", ".join(reason_text_list),

@@ -25,6 +25,7 @@ describe('WebRTCClient', () => {
   let mockDataChannel;
   let mockStream;
   let mockTrack;
+  let mockSender;
 
   beforeEach(() => {
     global.WebSocket = vi.fn();
@@ -41,6 +42,21 @@ describe('WebRTCClient', () => {
       onclose: null,
     };
 
+    mockTrack = {
+      kind: 'video',
+    };
+
+    mockSender = {
+      track: mockTrack,
+      getParameters: vi.fn(() => ({encodings: [{}]})),
+      setParameters: vi.fn(() => Promise.resolve()),
+    };
+
+    const mockTransceiver = {
+      sender: mockSender,
+      setCodecPreferences: vi.fn(),
+    };
+
     mockPeerConnection = {
       createOffer: vi.fn(() => Promise.resolve({
         type: 'offer',
@@ -52,7 +68,7 @@ describe('WebRTCClient', () => {
       })),
       setLocalDescription: vi.fn(() => Promise.resolve()),
       setRemoteDescription: vi.fn(() => Promise.resolve()),
-      addTrack: vi.fn(),
+      addTrack: vi.fn(() => mockSender),
       createDataChannel: vi.fn(() => mockDataChannel),
       close: vi.fn(),
       connectionState: 'new',
@@ -60,6 +76,7 @@ describe('WebRTCClient', () => {
       localDescription: {type: 'offer', sdp: 'mock-sdp'},
       addEventListener: vi.fn(),
       removeEventListener: vi.fn(),
+      getTransceivers: vi.fn(() => [mockTransceiver]),
       ontrack: null,
       onicecandidate: null,
       onconnectionstatechange: null,
@@ -74,10 +91,6 @@ describe('WebRTCClient', () => {
       readyState: WebSocket.OPEN,
     };
 
-    mockTrack = {
-      kind: 'video',
-    };
-
     mockStream = {
       getTracks: vi.fn(() => [mockTrack]),
     };
@@ -85,6 +98,15 @@ describe('WebRTCClient', () => {
     global.RTCPeerConnection = vi.fn(() => mockPeerConnection);
     global.WebSocket = vi.fn(() => mockWebSocket);
     global.RTCSessionDescription = vi.fn((desc) => desc);
+    global.RTCRtpSender = {
+      getCapabilities: vi.fn(() => ({
+        codecs: [
+          {mimeType: 'video/VP8'},
+          {mimeType: 'video/H264'},
+          {mimeType: 'video/VP9'},
+        ],
+      })),
+    };
   });
 
   afterEach(() => {

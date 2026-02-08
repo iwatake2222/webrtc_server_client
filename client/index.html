@@ -46,6 +46,12 @@ limitations under the License.
                    placeholder="ws://localhost:8080/ws">
           </div>
           <div class="col-md-2">
+            <label for="cameraSelect" class="form-label">Camera</label>
+            <select class="form-select" id="cameraSelect">
+              <option value="">Loading...</option>
+            </select>
+          </div>
+          <div class="col-md-2">
             <label for="resolution" class="form-label">Resolution</label>
             <select class="form-select" id="resolution">
               <option value="1920x1080">1920x1080 (Full HD)</option>
@@ -55,12 +61,14 @@ limitations under the License.
             </select>
           </div>
           <div class="col-md-2">
-            <label for="cameraSelect" class="form-label">Camera</label>
-            <select class="form-select" id="cameraSelect">
-              <option value="">Loading...</option>
+            <label for="codecSelect" class="form-label">Codec</label>
+            <select class="form-select" id="codecSelect">
+              <option value="vp8" selected>VP8</option>
+              <option value="h264">H.264</option>
+              <option value="vp9">VP9</option>
             </select>
           </div>
-          <div class="col-md-3 d-flex gap-2 align-items-end">
+          <div class="col-md-2 d-flex gap-2 align-items-end">
             <button id="connectBtn" class="btn btn-primary flex-fill">Connect</button>
             <button id="disconnectBtn" class="btn btn-secondary flex-fill" disabled>Disconnect</button>
           </div>
