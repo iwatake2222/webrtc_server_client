@@ -57,7 +57,7 @@ export class WebRTCClient {
    * Connects to the WebRTC server.
    * @param {string} serverUrl - WebSocket server URL.
    * @param {MediaStream} localStream - Local media stream to send.
-   * @param {string} [preferredCodec='vp8'] - Preferred video codec (vp8, h264, vp9).
+   * @param {string} [preferredCodec='vp8'] - Preferred video codec.
    * @return {Promise<void>}
    */
   async connect(serverUrl, localStream, preferredCodec = 'vp8') {
@@ -130,7 +130,7 @@ export class WebRTCClient {
 
     const transceivers = this.peerConnection.getTransceivers();
     const videoTransceiver = transceivers.find(
-      (t) => t.sender.track && t.sender.track.kind === 'video'
+      (t) => t.sender.track && t.sender.track.kind === 'video',
     );
 
     if (!videoTransceiver) {
@@ -157,10 +157,10 @@ export class WebRTCClient {
     }
 
     const preferredCodecs = codecs.filter(
-      (c) => c.mimeType.toLowerCase() === preferredMimeType.toLowerCase()
+      (c) => c.mimeType.toLowerCase() === preferredMimeType.toLowerCase(),
     );
     const otherCodecs = codecs.filter(
-      (c) => c.mimeType.toLowerCase() !== preferredMimeType.toLowerCase()
+      (c) => c.mimeType.toLowerCase() !== preferredMimeType.toLowerCase(),
     );
 
     if (preferredCodecs.length === 0) {
