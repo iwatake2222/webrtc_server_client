@@ -14,15 +14,22 @@
 
 """Image processors package."""
 
-from src.processors.alpamayo_processor import AlpamayoProcessor
 from src.processors.base_processor import BaseProcessor, ClientData
 from src.processors.blur_processor import BlurProcessor
 from src.processors.canny_processor import CannyProcessor
 
 __all__ = [
-    "AlpamayoProcessor",
     "BaseProcessor",
     "BlurProcessor",
     "CannyProcessor",
     "ClientData",
 ]
+
+try:
+  from src.processors.alpamayo_processor import (  # noqa: F401
+      AlpamayoProcessor,
+  )
+  __all__.append("AlpamayoProcessor")
+except ImportError:
+  # AlpamayoProcessor requires torch which may not be installed
+  pass

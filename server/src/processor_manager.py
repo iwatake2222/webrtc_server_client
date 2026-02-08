@@ -21,10 +21,15 @@ import numpy as np
 from numpy.typing import NDArray
 
 from src.fps_tracker import FpsTracker
-from src.processors.alpamayo_processor import AlpamayoProcessor
 from src.processors.base_processor import BaseProcessor, ClientData
 from src.processors.blur_processor import BlurProcessor
 from src.processors.canny_processor import CannyProcessor
+
+try:
+  from src.processors.alpamayo_processor import AlpamayoProcessor
+  _ALPAMAYO_AVAILABLE = True
+except ImportError:
+  _ALPAMAYO_AVAILABLE = False
 
 
 def _format_sensor_value(value: Any) -> Any:
@@ -109,6 +114,10 @@ class ProcessorManager:
     if name == "blur":
       return BlurProcessor()
     if name == "alpamayo":
+      if not _ALPAMAYO_AVAILABLE:
+        raise ValueError(
+            "AlpamayoProcessor requires torch. Install torch to use it."
+        )
       return AlpamayoProcessor()
 
     raise ValueError(f"Unknown processor: {name}")

@@ -17,7 +17,7 @@
 import logging
 import time
 from collections import deque
-from typing import Any
+from typing import Any, cast
 
 import cv2
 import numpy as np
@@ -49,30 +49,24 @@ CAMERA_PITCH_DEG = 0.0
 
 logger = logging.getLogger(__name__)
 
-_model = None
-_processor = None
-_is_model_loaded = False
+_MODEL: AlpamayoR1 | None = None
+_PROCESSOR: Any | None = None
 
 
-def _load_model() -> tuple[AlpamayoR1, Any]:
+def _load_model() -> None:
   """Load Alpamayo model globally.
 
   This function performs heavy initialization once at application startup.
   Uses print() instead of logger because logging is not configured yet
   at module import time.
-
-  Returns:
-    Tuple of (model, processor).
   """
-  global _model, _processor, _is_model_loaded
+  global _MODEL, _PROCESSOR  # pylint: disable=global-statement
   print("Loading Alpamayo model...")
-  _model = AlpamayoR1.from_pretrained(
+  _MODEL = AlpamayoR1.from_pretrained(
       "nvidia/Alpamayo-R1-10B", dtype=torch.bfloat16
   ).to("cuda")
-  _processor = helper.get_processor(_model.tokenizer)
-  _is_model_loaded = True
+  _PROCESSOR = helper.get_processor(_MODEL.tokenizer)
   print("Finished loading Alpamayo model")
-  return _model, _processor
 
 
 _load_model()
@@ -114,22 +108,21 @@ class AlpamayoProcessor(BaseProcessor):
       - processed_frame: BGR image with trajectory drawn.
       - stats: cot text
     """
-
-    if not _is_model_loaded:
-      logger.info("Model is not loaded yet. Skipping processing.")
+    if _MODEL is None or _PROCESSOR is None:
+      logger.warning("Model is not loaded yet. Skipping processing.")
       return frame, {}
 
     original_height, original_width = frame.shape[:2]
 
-    frame = cv2.resize(frame, (MODEL_INPUT_WIDTH, MODEL_INPUT_HEIGHT))
-    current_input_image = frame.copy()
+    resized_frame = cv2.resize(frame, (MODEL_INPUT_WIDTH, MODEL_INPUT_HEIGHT))
+    current_input_image = resized_frame.copy()
 
-    logger.info("Preparing input...")
-    self._frame_buffer.append(frame)
+    logger.debug("Preparing input...")
+    self._frame_buffer.append(cast(NDArray[np.uint8], resized_frame))
     input_images = opencv_images_to_torch(list(self._frame_buffer))
 
     messages = helper.create_message(input_images)
-    inputs = _processor.apply_chat_template(
+    inputs = _PROCESSOR.apply_chat_template(
         messages,
         tokenize=True,
         add_generation_prompt=False,
@@ -144,26 +137,31 @@ class AlpamayoProcessor(BaseProcessor):
     }
     model_inputs = helper.to_device(model_inputs, "cuda")
 
-    logger.info("Running inference...")
+    logger.debug("Running inference...")
     torch.cuda.manual_seed_all(42)
     start = time.time()
     with torch.autocast("cuda", dtype=torch.bfloat16):
-      pred_xyz, pred_rot, extra = _model.sample_trajectories_from_data_with_vlm_rollout(
-          data=model_inputs,
-          top_p=0.98,
-          temperature=0.6,
-          num_traj_samples=1,
-          max_generation_length=64,
-          return_extra=True,
+      pred_xyz, pred_rot, extra = (
+          _MODEL.sample_trajectories_from_data_with_vlm_rollout(
+              data=model_inputs,
+              top_p=0.98,
+              temperature=0.6,
+              num_traj_samples=1,
+              max_generation_length=64,
+              return_extra=True,
+          )
       )
     elapsed = time.time() - start
     logger.info("Inference done. elapsed: %.3f sec", elapsed)
 
-    pred_xy = pred_xyz.cpu().numpy()[0, 0, :, :, :2].transpose(0, 2, 1)
     reason_text_list = extra["cot"][0][0]
-    logger.debug("Extra: %s", extra)
-    logger.debug("pred_xy shape: %s", pred_xy.shape)
+    pred_xyz_np = pred_xyz.detach().cpu().numpy()
+    pred_rot_np = pred_rot.detach().cpu().numpy()
+    logger.debug("extra: %s", extra)
+    logger.debug("pred_xyz: %s, %s", pred_xyz_np.shape, pred_xyz_np)
+    logger.debug("pred_rot: %s, %s", pred_rot_np.shape, pred_rot_np)
 
+    pred_xy = pred_xyz_np[0, 0, :, :, :2].transpose(0, 2, 1)
     traj_x = []
     traj_y = []
     for traj_i in range(pred_xy.shape[0]):
@@ -193,13 +191,13 @@ class AlpamayoProcessor(BaseProcessor):
         camera_pitch_deg=CAMERA_PITCH_DEG,
     )
 
+    img_output = cv2.hconcat([img_trajectory_projected, img_trajectory])
+
     put_text_with_bg(
-        img_trajectory_projected,
+        img_output,
         ", ".join(reason_text_list),
         (10, 40),
     )
-
-    img_output = cv2.hconcat([img_trajectory_projected, img_trajectory])
 
     stats: dict[str, Any] = {
         "inference_time_sec": f"{elapsed:.3f}",
@@ -208,4 +206,4 @@ class AlpamayoProcessor(BaseProcessor):
         "original_height": original_height,
     }
 
-    return img_output, stats
+    return cast(NDArray[np.uint8], img_output), stats

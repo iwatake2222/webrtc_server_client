@@ -26,6 +26,9 @@ pythonpath = ["."]
 indent-string = "  "
 max-line-length = 80
 
+[tool.pylint.main]
+ignore-paths = ["src/demo_01_example_clip.py"]
+
 [tool.pylint.messages_control]
 extension-pkg-whitelist = "cv2"
 generated-members = "cv2.*"
@@ -33,6 +36,10 @@ disable = [
   "broad-exception-caught",
   "broad-exception-raised",
   "unused-argument",
+  "import-error",
+  "duplicate-code",
+  "too-many-arguments",
+  "too-many-locals",
 ]
 
 [tool.flake8]
@@ -43,3 +50,5 @@ indent-size = 2
 strict = true
 warn_return_any = true
 warn_unused_configs = true
+ignore_missing_imports = true
+exclude = ["src/demo_01_example_clip.py"]

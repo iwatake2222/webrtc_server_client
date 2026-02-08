@@ -1,6 +1,6 @@
-# Alpamayo WebRTC Demo
+# Alpamayo WebRTC on AWS EC2
 
-Real-time video processing application using WebRTC with NVIDIA Alpamayo.
+NVIDIA Alpamayo streaming demo for mobile devices, implemented with WebRTC on AWS EC2.
 
 ![sample_result](https://github.com/user-attachments/assets/6a54b2d2-3392-437b-81a5-e93d29984488)
 
@@ -56,8 +56,6 @@ aws cloudformation deploy \
 # Install dependencies
 sudo apt update
 sudo apt install -y nvidia-cuda-toolkit python3-pip
-pip install huggingface_hub
-huggingface-cli login
 
 # Install uv
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -77,10 +75,18 @@ uv sync --active
 cd ..
 uv pip install -e .
 
-# Test demo
-python3 src/demo_01_example_clip.py
+pip install huggingface_hub
+huggingface-cli login
 
+# Optional: Run test demo
+python3 src/demo_01_example_clip.py
+```
+
+```bash
 # Generate SSL certificate and run server
+cd server
+source .venv/bin/activate
+
 openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes -subj "/CN=localhost"
 python -m src.main --host 0.0.0.0 --port 8080 --cert cert.pem --key key.pem --processor alpamayo
 ```
@@ -90,6 +96,10 @@ python -m src.main --host 0.0.0.0 --port 8080 --cert cert.pem --key key.pem --pr
 1. Open `https://ec2-xxx-xxx-xxx-xxx.ap-northeast-1.compute.amazonaws.com:8080/`
 2. Accept the self-signed certificate warning (click "Advanced" -> "Proceed to site")
 3. Click the **Connect** button
+
+Note. Where to find the URL: EC2 -> Instances -> Public DNS
+
+<img width="552" height="212" alt="image" src="https://github.com/user-attachments/assets/2187eece-1d2b-4c8b-a4a4-22b25ae9127a" />
 
 ## Local Development
 

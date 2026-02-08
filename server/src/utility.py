@@ -183,7 +183,7 @@ def draw_trajectory_projected(
   cx = img_w / 2.0
   cy = img_h / 2.0
 
-  K = np.array(
+  camera_matrix = np.array(
       [
           [fx, 0.0, cx],
           [0.0, fy, cy],
@@ -209,7 +209,7 @@ def draw_trajectory_projected(
   # Debug: project a far point to visualize camera viewing direction
   far_point_3d = np.array([[0.0, 0.0, 1000.0]], dtype=np.float64)
   far_point_2d, _ = cv2.projectPoints(
-      far_point_3d, rvec, tvec, K, dist_coeffs
+      far_point_3d, rvec, tvec, camera_matrix, dist_coeffs
   )
 
   cv2.circle(
@@ -230,7 +230,7 @@ def draw_trajectory_projected(
 
     # Project 3D points onto the image plane
     pts_img, _ = cv2.projectPoints(
-        pts_3d, rvec, tvec, K, dist_coeffs
+        pts_3d, rvec, tvec, camera_matrix, dist_coeffs
     )
     pts_img = pts_img.reshape(-1, 2)
 
