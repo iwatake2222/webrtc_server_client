@@ -97,6 +97,10 @@ python -m src.main --host 0.0.0.0 --port 8080 --cert cert.pem --key key.pem --pr
 2. Accept the self-signed certificate warning (click "Advanced" -> "Proceed to site")
 3. Click the **Connect** button
 
+Note. Where to find the URL: EC2 -> Instances -> Public DNS
+
+<img width="552" height="212" alt="image" src="https://github.com/user-attachments/assets/2187eece-1d2b-4c8b-a4a4-22b25ae9127a" />
+
 ## Local Development
 
 ### Setup
