@@ -231,6 +231,10 @@ aws ec2 describe-instance-type-offerings \
     --output table
 ```
 
+<img width="1311" height="558" alt="image" src="https://github.com/user-attachments/assets/aa3c8dd9-c2f1-4e79-b32d-69d5aeb797d2" />
+
+<img width="1368" height="884" alt="image" src="https://github.com/user-attachments/assets/5bb58465-eec3-4de3-93fb-17c6828e795a" />
+
 ### SSH Configuration
 
 Add to `~/.ssh/config`:
