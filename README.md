@@ -31,13 +31,20 @@ NVIDIA Alpamayo streaming demo for mobile devices, implemented with WebRTC on AW
 ### 1. Deploy AWS Infrastructure
 
 ```bash
+# Commands on a local PC
+
 cd aws
 
-Region=ap-northeast-1
-AvailabilityZone=ap-northeast-1d
-ImageId=ami-0e7d0c8815f409923   # Deep Learning OSS Nvidia Driver AMI GPU PyTorch 2.9 (Ubuntu 24.04)
-InstanceType=g6.2xlarge
-RootVolumeSize=256
+# Region=ap-northeast-1
+# AvailabilityZone=ap-northeast-1a
+# ImageId=ami-0e7d0c8815f409923   # Deep Learning OSS Nvidia Driver AMI GPU PyTorch 2.9 (Ubuntu 24.04)
+# InstanceType=g6.2xlarge
+Region=us-east-2
+AvailabilityZone=us-east-2a
+ImageId=ami-0306ff3d44ab8cabd    # Deep Learning OSS Nvidia Driver AMI GPU PyTorch 2.9 (Ubuntu 24.04)
+InstanceType=g7e.2xlarge
+
+RootVolumeSize=128
 SystemName=webrtc-alpamayo
 TemplateFileName=./ec2_public_alb.yaml
 
@@ -57,6 +64,10 @@ aws cloudformation deploy \
 ### 2. Setup on EC2
 
 ```bash
+# Commands on AWS EC2
+# export AWS_DEFAULT_REGION=us-east-2  or $env:AWS_DEFAULT_REGION = "us-east-2"
+# ssh webrtc-ec2-server
+
 # Install dependencies
 sudo apt update
 sudo apt install -y nvidia-cuda-toolkit python3-pip
@@ -79,23 +90,29 @@ uv sync --active
 cd ..
 uv pip install -e .
 
-pip install huggingface_hub
+pip install huggingface_hub --break-system-packages
 huggingface-cli login
 
 # Optional: Run test demo
 python3 src/demo_01_example_clip.py
 ```
 
+### 3. Run Server
+
 ```bash
-# Generate SSL certificate and run server
+# Commands on AWS EC2
+
 cd server
 source .venv/bin/activate
 
+# Generate SSL certificate
 openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes -subj "/CN=localhost"
+
+# Run server
 python -m src.main --host 0.0.0.0 --port 8080 --cert cert.pem --key key.pem --processor alpamayo
 ```
 
-### 3. Access the Application
+### 4. Access the Application
 
 1. Open `https://ec2-xxx-xxx-xxx-xxx.ap-northeast-1.compute.amazonaws.com:8080/`
 2. Accept the self-signed certificate warning (click "Advanced" -> "Proceed to site")
@@ -196,7 +213,25 @@ npm run lint
 | `/ws` | WebSocket signaling |
 | `/health` | Health check |
 
-## SSH Configuration for AWS EC2
+## AWS Settings
+
+### How to use GPU instances
+
+- AWS Console -> `Service Quotas` -> `AWS services` -> `Amazon Elastic Compute Cloud (Amazon EC2)` -> search for `Running On-Demand G and VT instances`
+- Click `Request increase at account level`, then set 8 or more for `Increase quota value` and send the request
+- Wait for approval from AWS (usually within 24 hours)
+- Check which availability zones support your desired instance type:
+
+```bash
+aws ec2 describe-instance-type-offerings \
+    --location-type availability-zone \
+    --filters Name=instance-type,Values=g7e.2xlarge \
+    --region us-east-2 \
+    --query "InstanceTypeOfferings[].Location" \
+    --output table
+```
+
+### SSH Configuration
 
 Add to `~/.ssh/config`:
 
@@ -218,6 +253,11 @@ For Windows PowerShell, replace:
 Connect via:
 
 ```bash
+# For Linux
+export AWS_DEFAULT_REGION=us-east-2
+# For Windows
+$env:AWS_DEFAULT_REGION = "us-east-2"
+
 ssh ubuntu@i-00000000000000000
 # or
 ssh webrtc-ec2-server
@@ -225,7 +265,7 @@ ssh webrtc-ec2-server
 
 ## Future Work(?)
 
-A Toy Edge–Server Collaborative End-to-End Autonomous Driving System.
+A Toy Edge-Server Collaborative End-to-End Autonomous Driving System.
 This is just a thought experiment and not a production-ready system.
 
 ![e2e](00_doc/edge-server-e2e-system.drawio.png)

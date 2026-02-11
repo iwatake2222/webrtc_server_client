@@ -25,7 +25,9 @@ from typing import Any, Optional, cast
 from aiohttp import web
 from aiortc import (
     MediaStreamTrack,
+    RTCConfiguration,
     RTCDataChannel,
+    RTCIceServer,
     RTCPeerConnection,
     RTCSessionDescription,
 )
@@ -312,7 +314,20 @@ class WebRTCServer:
     await ws.prepare(request)
     logger.info("WebSocket connection established")
 
-    pc = RTCPeerConnection()
+    ice_servers = [
+        RTCIceServer(urls=["stun:stun.l.google.com:19302"]),
+        RTCIceServer(
+            urls=["turn:openrelay.metered.ca:80"],
+            username="openrelayproject",
+            credential="openrelayproject",
+        ),
+        RTCIceServer(
+            urls=["turn:openrelay.metered.ca:80?transport=tcp"],
+            username="openrelayproject",
+            credential="openrelayproject",
+        ),
+    ]
+    pc = RTCPeerConnection(RTCConfiguration(iceServers=ice_servers))
     self._pcs.add(pc)
     processor_manager = ProcessorManager(processor=self._config.processor)
     transform_track: Optional[VideoTransformTrack] = None
