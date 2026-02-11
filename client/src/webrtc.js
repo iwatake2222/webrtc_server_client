@@ -66,7 +66,19 @@ export class WebRTCClient {
       await this.waitForWebSocketOpen();
 
       this.peerConnection = new RTCPeerConnection({
-        iceServers: [{urls: 'stun:stun.l.google.com:19302'}],
+        iceServers: [
+          {urls: 'stun:stun.l.google.com:19302'},
+          {
+            urls: 'turn:openrelay.metered.ca:80',
+            username: 'openrelayproject',
+            credential: 'openrelayproject',
+          },
+          {
+            urls: 'turn:openrelay.metered.ca:80?transport=tcp',
+            username: 'openrelayproject',
+            credential: 'openrelayproject',
+          },
+        ],
       });
 
       this.setupPeerConnectionHandlers();
@@ -210,14 +222,14 @@ export class WebRTCClient {
       this.peerConnection.addEventListener(
         'icegatheringstatechange', checkState);
 
-      // Timeout after 5 seconds
+      // Timeout after 15 seconds (extended for unstable network like tethering)
       setTimeout(() => {
         if (this.peerConnection) {
           this.peerConnection.removeEventListener(
             'icegatheringstatechange', checkState);
         }
         resolve();
-      }, 5000);
+      }, 15000);
     });
   }
 
