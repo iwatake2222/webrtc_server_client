@@ -120,7 +120,7 @@ def draw_trajectory(
     )
 
     for p in pts:
-      cv2.circle(img, tuple(p), 2, (0, 0, 255), -1)
+      cv2.circle(img, tuple(p), thickness, (0, 0, 255), -1)
 
   return img
 
@@ -161,6 +161,7 @@ def draw_trajectory_projected(
     fy: float,
     camera_height_m: float,
     camera_pitch_deg: float,
+    thickness: int = 2,
 ) -> np.ndarray:
   """Project 3D ground-plane trajectories onto an image.
 
@@ -172,6 +173,7 @@ def draw_trajectory_projected(
     fy: Camera focal length in y direction (pixels).
     camera_height_m: Camera height above the ground in meters.
     camera_pitch_deg: Camera pitch angle in degrees.
+    thickness: Line thickness in pixels.
 
   Returns:
     Image with projected trajectories drawn.
@@ -245,7 +247,7 @@ def draw_trajectory_projected(
           max_depth_m=len(pts_img),
       )
 
-      cv2.line(img, p1, p2, color=color, thickness=2)
+      cv2.line(img, p1, p2, color=color, thickness=thickness)
 
   return img
 

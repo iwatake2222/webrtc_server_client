@@ -36,15 +36,15 @@ from src.utility import (
 )
 
 
-WIDTH_TRAJECTORY_WINDOW_PX = 200
+WIDTH_TRAJECTORY_WINDOW_PX = 300
 WORLD_WIDTH_TRAJECTORY_WINDOW_M = 10.0
 WORLD_HEIGHT_TRAJECTORY_WINDOW_M = 70.0
-MODEL_INPUT_NUM_FRAMES = 1
-MODEL_INPUT_WIDTH = 1920 // 2
-MODEL_INPUT_HEIGHT = 1080 // 2
+MODEL_INPUT_NUM_FRAMES = 4
+MODEL_INPUT_WIDTH = 1920
+MODEL_INPUT_HEIGHT = 1080
 CAMERA_FX = 1000.0
 CAMERA_FY = 1000.0
-CAMERA_HEIGHT_M = 1.5
+CAMERA_HEIGHT_M = 1.2
 CAMERA_PITCH_DEG = 0.0
 
 logger = logging.getLogger(__name__)
@@ -147,7 +147,7 @@ class AlpamayoProcessor(BaseProcessor):
               top_p=0.98,
               temperature=0.6,
               num_traj_samples=1,
-              max_generation_length=64,
+              max_generation_length=256,
               return_extra=True,
           )
       )
@@ -178,6 +178,7 @@ class AlpamayoProcessor(BaseProcessor):
         world_height_m=WORLD_HEIGHT_TRAJECTORY_WINDOW_M,
         image_width_px=WIDTH_TRAJECTORY_WINDOW_PX,
         image_height_px=current_input_image.shape[0],
+        thickness=4
     )
 
     logger.debug("Projecting trajectory onto input image...")
@@ -189,6 +190,7 @@ class AlpamayoProcessor(BaseProcessor):
         fy=CAMERA_FY,
         camera_height_m=CAMERA_HEIGHT_M,
         camera_pitch_deg=CAMERA_PITCH_DEG,
+        thickness=4
     )
 
     img_output = cv2.hconcat([img_trajectory_projected, img_trajectory])
@@ -196,7 +198,8 @@ class AlpamayoProcessor(BaseProcessor):
     put_text_with_bg(
         img_output,
         ", ".join(reason_text_list),
-        (10, 40),
+        (10, 60),
+        font_scale=2.0, thickness=3, bg_thickness_ratio=4,
     )
 
     # WebRTC may reduce the stream resolution if frame sizes vary,
