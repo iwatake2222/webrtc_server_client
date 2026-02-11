@@ -73,6 +73,10 @@ export class WebRTCClient {
       this.createDataChannel();
 
       localStream.getTracks().forEach((track) => {
+        if (track.kind === 'video') {
+          // Prioritize detail/quality over motion smoothness
+          track.contentHint = 'detail';
+        }
         const sender = this.peerConnection.addTrack(track, localStream);
         if (track.kind === 'video') {
           this.configureVideoSender(sender);
@@ -112,7 +116,9 @@ export class WebRTCClient {
     params.encodings[0].scaleResolutionDownBy = 1.0;
     // Set high max bitrate (20 Mbps) to prevent quality degradation
     params.encodings[0].maxBitrate = 20_000_000;
-    // params.encodings[0].maxFramerate = 10;
+    params.encodings[0].maxFramerate = 10;
+    // Maintain resolution when bandwidth is limited (reduce framerate instead)
+    params.degradationPreference = 'maintain-resolution';
     try {
       await sender.setParameters(params);
     } catch (error) {
