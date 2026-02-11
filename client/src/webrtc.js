@@ -222,14 +222,14 @@ export class WebRTCClient {
       this.peerConnection.addEventListener(
         'icegatheringstatechange', checkState);
 
-      // Timeout after 5 seconds
+      // Timeout after 15 seconds (extended for unstable network like tethering)
       setTimeout(() => {
         if (this.peerConnection) {
           this.peerConnection.removeEventListener(
             'icegatheringstatechange', checkState);
         }
         resolve();
-      }, 5000);
+      }, 15000);
     });
   }
 
