@@ -1,8 +1,8 @@
 # Alpamayo WebRTC on AWS EC2
 
-NVIDIA Alpamayo streaming demo for mobile devices, implemented with WebRTC on AWS EC2.
+NVIDIA Alpamayo streaming demo for mobile devices, implemented with WebRTC on AWS EC2 (G7e instance).
 
-![sample_result](https://github.com/user-attachments/assets/6a54b2d2-3392-437b-81a5-e93d29984488)
+![sample_result](00_doc/sample.jpg)
 
 ## Overview
 
@@ -18,13 +18,6 @@ NVIDIA Alpamayo streaming demo for mobile devices, implemented with WebRTC on AW
 - Return processed video to client in real-time
 - Send processing stats (image size, FPS, processing time, CoT) via DataChannel
 - Mobile-friendly web client with sensor data support (GPS, accelerometer, gyroscope)
-
-## System Requirements
-
-- **GPU**: NVIDIA GPU with CUDA support (required for Alpamayo processor)
-- **VRAM**: 24GB+ recommended for Alpamayo-R1-10B model
-- **Python**: 3.12+
-- **Node.js**: 20+ (for client development)
 
 ## Quick Start (AWS Deployment)
 
@@ -110,6 +103,11 @@ openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -node
 
 # Run server
 python -m src.main --host 0.0.0.0 --port 8080 --cert cert.pem --key key.pem --processor alpamayo
+
+# Optional
+nvidia-smi -q -d SUPPORTED_CLOCKS
+sudo nvidia-smi -ac 12481,2430
+sudo nvidia-smi -pm 1
 ```
 
 ### 4. Access the Application
@@ -278,22 +276,6 @@ This is just a thought experiment and not a production-ready system.
 
 This project uses [NVIDIA Alpamayo](https://github.com/NVlabs/alpamayo) for trajectory prediction.
 
-- **Inference code**: Apache 2.0 License
-- **Model weights**: Non-commercial license (research and evaluation only)
-
-If you use Alpamayo in research, please cite:
-
-```bibtex
-@article{wang2025alpamayo,
-  title={Alpamayo-R1: Bridging Reasoning and Action Prediction for Generalizable Autonomous Driving in the Long Tail},
-  author={Wang, Yan and Luo, Wenjie and Ivanovic, Boris and Pavone, Marco and others},
-  journal={arXiv preprint arXiv:2511.00088},
-  year={2025}
-}
-```
-
 ## License
 
 This project is licensed under Apache 2.0.
-
-**Note**: The Alpamayo model weights are released under a non-commercial license and are intended for research, experimentation, and evaluation purposes only.
