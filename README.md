@@ -4,6 +4,10 @@ NVIDIA Alpamayo streaming demo for mobile devices, implemented with WebRTC on AW
 
 ![sample_result](00_doc/sample.jpg)
 
+
+https://youtu.be/uGFgMgqRNQ8
+
+
 ## Overview
 
 ![overview](00_doc/overview.drawio.png)
