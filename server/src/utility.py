@@ -217,9 +217,9 @@ def draw_trajectory_projected(
   cv2.circle(
       img,
       tuple(far_point_2d.reshape(2).astype(int)),
-      radius=6,
+      radius=thickness,
       color=(0, 255, 0),
-      thickness=1,
+      thickness=thickness//2 + 1,
   )
 
   # Project and draw each trajectory

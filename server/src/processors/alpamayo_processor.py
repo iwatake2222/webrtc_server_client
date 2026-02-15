@@ -61,10 +61,12 @@ def _load_model() -> None:
   at module import time.
   """
   global _MODEL, _PROCESSOR  # pylint: disable=global-statement
+  torch.backends.cudnn.benchmark = True
   print("Loading Alpamayo model...")
   _MODEL = AlpamayoR1.from_pretrained(
       "nvidia/Alpamayo-R1-10B", dtype=torch.bfloat16
-  ).to("cuda")
+  ).to("cuda").eval()
+  _MODEL = torch.compile(_MODEL, mode="reduce-overhead")
   _PROCESSOR = helper.get_processor(_MODEL.tokenizer)
   print("Finished loading Alpamayo model")
 
@@ -138,19 +140,20 @@ class AlpamayoProcessor(BaseProcessor):
     model_inputs = helper.to_device(model_inputs, "cuda")
 
     logger.debug("Running inference...")
-    torch.cuda.manual_seed_all(42)
+    # torch.cuda.manual_seed_all(42)
     start = time.time()
-    with torch.autocast("cuda", dtype=torch.bfloat16):
-      pred_xyz, pred_rot, extra = (
-          _MODEL.sample_trajectories_from_data_with_vlm_rollout(
-              data=model_inputs,
-              top_p=0.98,
-              temperature=0.6,
-              num_traj_samples=1,
-              max_generation_length=256,
-              return_extra=True,
-          )
-      )
+    with torch.inference_mode():
+      with torch.autocast("cuda", dtype=torch.bfloat16):
+        pred_xyz, pred_rot, extra = (
+            _MODEL.sample_trajectories_from_data_with_vlm_rollout(
+                data=model_inputs,
+                top_p=0.98,
+                temperature=0.6,
+                num_traj_samples=1,
+                max_generation_length=256,
+                return_extra=True,
+            )
+        )
     elapsed = time.time() - start
     logger.info("Inference done. elapsed: %.3f sec", elapsed)
 
@@ -178,7 +181,7 @@ class AlpamayoProcessor(BaseProcessor):
         world_height_m=WORLD_HEIGHT_TRAJECTORY_WINDOW_M,
         image_width_px=WIDTH_TRAJECTORY_WINDOW_PX,
         image_height_px=current_input_image.shape[0],
-        thickness=4
+        thickness=8
     )
 
     logger.debug("Projecting trajectory onto input image...")
@@ -190,7 +193,7 @@ class AlpamayoProcessor(BaseProcessor):
         fy=CAMERA_FY,
         camera_height_m=CAMERA_HEIGHT_M,
         camera_pitch_deg=CAMERA_PITCH_DEG,
-        thickness=4
+        thickness=16
     )
 
     img_output = cv2.hconcat([img_trajectory_projected, img_trajectory])
@@ -204,7 +207,7 @@ class AlpamayoProcessor(BaseProcessor):
 
     # WebRTC may reduce the stream resolution if frame sizes vary,
     # so we always send frames at the original resolution
-    img_output = cv2.resize(img_output, (original_width, original_height))
+    # img_output = cv2.resize(img_output, (original_width, original_height))
 
     stats: dict[str, Any] = {
         "inference_time_sec": f"{elapsed:.3f}",
